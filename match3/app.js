@@ -1,5 +1,6 @@
 const SIZE = 8;
 const TYPES = 6;
+const SYMBOLS = ["◆", "◉", "▲", "★", "●", "✦"];
 const boardEl = document.getElementById("board");
 const scoreEl = document.getElementById("score");
 const statusEl = document.getElementById("status");
@@ -141,7 +142,7 @@ function render() {
     tile.className = `tile type-${value}`;
     tile.dataset.index = String(i);
     tile.setAttribute("aria-label", `${t("cell-label")} ${i + 1}`);
-    tile.textContent = "⬤";
+    tile.textContent = SYMBOLS[value] || "⬤";
     tile.addEventListener("click", () => handleCellClick(i));
     boardEl.appendChild(tile);
   });
@@ -150,6 +151,67 @@ function render() {
     boardEl.children[selected].setAttribute("aria-label", `${t("cell-label")} ${selected + 1} (${t("aria-selected")})`);
     boardEl.children[selected].classList.add("selected");
   }
+}
+
+function animateSwapTiles(a, b) {
+  const aEl = boardEl.children[a];
+  const bEl = boardEl.children[b];
+  if (!aEl || !bEl) return Promise.resolve();
+
+  const aRect = aEl.getBoundingClientRect();
+  const bRect = bEl.getBoundingClientRect();
+  const dx = bRect.left - aRect.left;
+  const dy = bRect.top - aRect.top;
+
+  const end = new Promise((resolve) => {
+    let done = false;
+    const onTransitionEnd = (event) => {
+      if (event.target !== aEl && event.target !== bEl) return;
+      if (event.propertyName !== "transform") return;
+      if (done) return;
+      done = true;
+      cleanup();
+      resolve();
+    };
+
+    const cleanup = () => {
+      aEl.classList.remove("swapping");
+      bEl.classList.remove("swapping");
+      aEl.style.transform = "";
+      bEl.style.transform = "";
+      aEl.removeEventListener("transitionend", onTransitionEnd);
+      bEl.removeEventListener("transitionend", onTransitionEnd);
+    };
+
+    aEl.classList.add("swapping");
+    bEl.classList.add("swapping");
+    aEl.style.transform = `translate(${dx}px, ${dy}px)`;
+    bEl.style.transform = `translate(${-dx}px, ${-dy}px)`;
+
+    requestAnimationFrame(() => {
+      aEl.style.transform = "";
+      bEl.style.transform = "";
+    });
+
+    aEl.addEventListener("transitionend", onTransitionEnd);
+    bEl.addEventListener("transitionend", onTransitionEnd);
+    setTimeout(() => {
+      if (!done) {
+        done = true;
+        cleanup();
+        resolve();
+      }
+    }, 240);
+  });
+
+  return end;
+}
+
+function flashNoMatch(index) {
+  const tile = boardEl.children[index];
+  if (!tile) return;
+  tile.classList.add("shake");
+  tile.addEventListener("animationend", () => tile.classList.remove("shake"), { once: true });
 }
 
 function hasMatchAt(i) {
@@ -320,21 +382,25 @@ async function handleCellClick(i) {
   const a = selected;
   const b = i;
   selected = null;
+  locked = true;
+  await animateSwapTiles(a, b);
   swap(a, b);
   render();
 
   const matches = findMatches();
   if (matches.length === 0) {
+    flashNoMatch(a);
+    await animateSwapTiles(a, b);
     swap(a, b);
     render();
     statusEl.textContent = t("status-no-match");
     await flashRemoved(500);
     statusEl.textContent = "";
+    locked = false;
     return;
   }
 
   statusEl.textContent = "";
-  locked = true;
   await settleBoard();
   locked = false;
 }

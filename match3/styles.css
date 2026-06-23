@@ -2,6 +2,7 @@
   font-family: Arial, Helvetica, sans-serif;
   background: #0f172a;
   color: #e2e8f0;
+  --panel: #111827;
 }
 
 * {
@@ -18,23 +19,68 @@ body {
 
 .app {
   width: min(420px, 100%);
-  background: #111827;
+  background: var(--panel);
   border-radius: 16px;
   padding: 16px;
   box-shadow: 0 18px 40px rgba(2, 6, 23, 0.5);
+  display: grid;
+  gap: 14px;
 }
 
 header {
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.topbar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 14px;
-  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.title-block {
+  flex: 1;
+  min-width: 210px;
+}
+
+.badge {
+  margin: 0 0 6px;
+  display: inline-block;
+  background: #0f766e;
+  color: #ecfeff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+}
+
+.title-block p {
+  margin-bottom: 8px;
+}
+
+.hud {
+  min-width: 160px;
+  width: 160px;
+}
+
+.hud .score-box {
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 8px;
+  text-align: left;
+  margin-bottom: 8px;
 }
 
 h1 {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   font-size: 24px;
+  letter-spacing: 0;
 }
 
 p {
@@ -49,11 +95,26 @@ p {
   min-width: 120px;
 }
 
+.score-box span {
+  display: block;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.score-box strong {
+  display: block;
+  font-size: 28px;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+}
+
 .lang-label {
   display: block;
   margin-top: 10px;
   margin-bottom: 6px;
   font-size: 13px;
+  color: #cbd5e1;
 }
 
 select#locale {
@@ -66,12 +127,7 @@ select#locale {
   max-width: 180px;
 }
 
-#score {
-  font-size: 30px;
-}
-
 button {
-  margin-top: 8px;
   border: 0;
   border-radius: 8px;
   padding: 8px 10px;
@@ -79,14 +135,42 @@ button {
   color: #06220f;
   font-weight: 700;
   cursor: pointer;
+  width: 100%;
+  max-width: 180px;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
 }
 
 button:active {
   transform: translateY(1px);
 }
 
+.status-area {
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-height: 72px;
+}
+
+.hint,
+.offline-status {
+  min-height: 22px;
+  margin: 0;
+}
+
+.offline-status {
+  color: #f59e0b;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
 .board {
-  margin-top: 14px;
+  margin-top: 0;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
@@ -95,27 +179,54 @@ button:active {
   aspect-ratio: 1 / 1;
 }
 
+.board-wrap {
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 10px;
+}
+
 .tile {
   border-radius: 10px;
   width: 100%;
   aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
-  font-size: 34px;
+  font-size: 24px;
   user-select: none;
   cursor: pointer;
-  transition: transform 120ms ease, opacity 120ms ease;
+  transition: transform 160ms ease, opacity 160ms ease;
   background: #334155;
+  position: relative;
+  overflow: hidden;
+}
+
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,0.25);
 }
 
 .tile.selected {
-  outline: 3px solid #f59e0b;
-  transform: scale(0.97);
+  outline: 2px solid #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4), 0 0 14px rgba(0, 0, 0, 0.4);
+  transform: scale(0.98);
+}
+
+.tile.shake {
+  animation: shake 180ms ease;
 }
 
 .tile.removing {
   opacity: 0;
-  transform: scale(0.6);
+  transform: scale(0.4);
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.tile.swapping {
+  z-index: 2;
 }
 
 .type-0 { background: linear-gradient(135deg, #f97316, #ea580c); }
@@ -124,3 +235,11 @@ button:active {
 .type-3 { background: linear-gradient(135deg, #ec4899, #db2777); }
 .type-4 { background: linear-gradient(135deg, #a855f7, #9333ea); }
 .type-5 { background: linear-gradient(135deg, #eab308, #ca8a04); }
+
+@keyframes shake {
+  0%,
+  100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+}
