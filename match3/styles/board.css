@@ -1,12 +1,20 @@
 .board-wrap {
   padding: var(--space-3);
+  min-height: 0;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-soft);
   background: var(--color-surface-board);
 }
 
 .board {
-  width: min(var(--board-max), 100%);
+  --board-size: min(
+    var(--board-size-by-view, var(--board-size-fallback)),
+    var(--board-max)
+  );
+
+  width: min(100%, var(--board-size));
+  max-height: var(--board-size);
+  max-width: 100%;
   margin: 0 auto;
   aspect-ratio: 1 / 1;
   display: grid;
@@ -310,15 +318,17 @@
 }
 
 @media (max-width: 430px) {
+  .app {
+    --tile-gap: var(--tile-gap-mobile);
+  }
+
   .board-wrap {
     padding: 0;
   }
 
   .board {
-    width: min(100%, calc(8 * var(--tile-size-min) + 7 * var(--tile-gap-mobile)));
+    width: min(100%, var(--board-size));
     gap: var(--tile-gap-mobile);
-    grid-template-columns: repeat(8, minmax(0, var(--tile-size-min)));
-    grid-template-rows: repeat(8, minmax(0, var(--tile-size-min)));
   }
 
   .tile {
@@ -328,14 +338,14 @@
 
 @media (min-width: 431px) and (max-width: 900px) {
   .board {
-    width: min(640px, 88vw);
+    width: min(100%, var(--board-size));
     gap: 4px;
   }
 }
 
 @media (min-width: 901px) {
   .board {
-    width: min(560px, 64vw);
+    width: min(100%, var(--board-size));
   }
 
   .tile {

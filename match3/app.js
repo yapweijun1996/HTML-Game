@@ -182,6 +182,44 @@ function startTurn() {
   flowStartTurn(gameState, uiState);
 }
 
+const appEl = document.querySelector(".app");
+const topbarEl = document.querySelector(".topbar");
+const statusAreaEl = document.querySelector(".status-area");
+const boardWrapEl = document.querySelector(".board-wrap");
+let boardLayoutRaf = 0;
+
+function refreshBoardSize() {
+  if (!appEl) return;
+  if (!topbarEl || !statusAreaEl || !boardWrapEl) return;
+  if (boardLayoutRaf) return;
+  boardLayoutRaf = requestAnimationFrame(() => {
+    boardLayoutRaf = 0;
+
+    const appStyle = getComputedStyle(appEl);
+    const boardWrapStyle = getComputedStyle(boardWrapEl);
+
+    const parsePx = (value) => {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const appPaddingV = parsePx(appStyle.paddingTop) + parsePx(appStyle.paddingBottom);
+    const appPaddingH = parsePx(appStyle.paddingLeft) + parsePx(appStyle.paddingRight);
+    const boardWrapPaddingV = parsePx(boardWrapStyle.paddingTop) + parsePx(boardWrapStyle.paddingBottom);
+    const boardWrapPaddingH = parsePx(boardWrapStyle.paddingLeft) + parsePx(boardWrapStyle.paddingRight);
+    const appGap = parsePx(appStyle.rowGap) || parsePx(appStyle.gap);
+    const viewportWidth = window.visualViewport?.width || window.innerWidth;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+
+    const measuredBoardWrap = Math.max(220, Math.floor(viewportWidth - appPaddingH - 8), Math.floor(boardWrapEl.clientWidth - boardWrapPaddingH));
+    const reservedHeight = appPaddingV + boardWrapPaddingV + appGap * 2 + topbarEl.getBoundingClientRect().height + statusAreaEl.getBoundingClientRect().height + 12;
+    const sizeByHeight = Math.max(220, Math.floor(Math.min(viewportHeight, window.innerHeight) - reservedHeight));
+    const computedSize = Math.min(sizeByHeight, measuredBoardWrap);
+
+    appEl.style.setProperty("--board-size-by-view", `${Math.floor(computedSize)}px`);
+  });
+}
+
 function startLevel(level) {
   flowStartLevel({
     state: gameState,
@@ -196,6 +234,7 @@ function startLevel(level) {
   setStatusLine("");
   render();
   updateStatus();
+  refreshBoardSize();
 }
 
 function saveTutorialState() {
@@ -435,6 +474,7 @@ function render(appearingIndexes = [], fallingTiles = []) {
   updateControls();
   updateStatus();
   renderAchievements();
+  refreshBoardSize();
 }
 
 const getSwipeTarget = (fromIndex, dx, dy) => logicGetSwipeTarget(fromIndex, dx, dy);
@@ -591,3 +631,21 @@ Match3UI.setAriaLiveRegions();
 
 startLevel(gameProgress.currentLevel || 1);
 setLocale(currentLocale);
+
+const scheduleBoardResize = () => {
+  refreshBoardSize();
+};
+
+window.addEventListener("resize", scheduleBoardResize, { passive: true });
+window.addEventListener("orientationchange", scheduleBoardResize, { passive: true });
+window.addEventListener("load", () => {
+  refreshBoardSize();
+});
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", scheduleBoardResize, { passive: true });
+  window.visualViewport.addEventListener("scroll", scheduleBoardResize, { passive: true });
+}
+
+requestAnimationFrame(() => {
+  refreshBoardSize();
+});

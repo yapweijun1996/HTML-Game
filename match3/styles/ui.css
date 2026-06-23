@@ -14,8 +14,8 @@
 }
 
 .title-block {
-  padding: var(--space-3);
-  min-height: 128px;
+  padding: var(--space-2) var(--space-3);
+  min-height: clamp(56px, 12vh, 88px);
 }
 
 .badge {
@@ -60,16 +60,16 @@
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .score-box {
   border-radius: var(--radius-sm);
-  padding: 10px;
+  padding: 6px 10px;
   background: var(--color-bg-page);
   border: 1px solid var(--color-border-strong);
   transform-origin: center;
-  min-height: 72px;
+  min-height: clamp(46px, 9vh, 58px);
 }
 
 .score-box span {
@@ -81,7 +81,7 @@
 
 .score-box strong {
   display: block;
-  font-size: clamp(1.45rem, 5vw, 1.85rem);
+  font-size: clamp(1.3rem, 4.8vw, 1.65rem);
   color: var(--color-text-invert);
   line-height: 1.1;
   letter-spacing: 0.01em;
@@ -89,7 +89,7 @@
 
 .control-row {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
 }
 
@@ -118,7 +118,7 @@ button {
     transform var(--duration-fast) var(--ease-main),
     box-shadow var(--duration-fast) var(--ease-main),
     filter var(--duration-fast) var(--ease-main);
-  min-height: 44px;
+  min-height: 40px;
 }
 
 button:hover {
@@ -167,7 +167,7 @@ button:active {
 
 .status-area {
   padding: var(--space-3);
-  min-height: 88px;
+  min-height: clamp(48px, 9vh, 68px);
   display: grid;
   gap: 8px;
 }
@@ -316,7 +316,7 @@ button:active {
   }
 
   .title-block {
-    min-height: auto;
+    min-height: 50px;
     padding: var(--space-2) var(--space-3);
   }
 
@@ -345,6 +345,77 @@ button:active {
 
   .status-area {
     padding: 8px var(--space-3) 10px;
+    min-height: 52px;
+    gap: 4px;
+  }
+}
+
+@media (max-height: 760px) {
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .title-block {
+    padding: 7px 10px;
     min-height: 72px;
+  }
+
+  .hud {
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .stat-grid {
+    gap: 6px;
+  }
+
+  .score-box {
+    min-height: 48px;
+    padding: 6px 8px;
+  }
+
+  .score-box span {
+    margin-bottom: 2px;
+    font-size: 11px;
+  }
+
+  .score-box strong {
+    font-size: 1.24rem;
+  }
+
+  .control-row {
+    gap: 6px;
+  }
+
+  .control-row--primary,
+  .control-row--secondary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  button,
+  select,
+  .hud select {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+
+  .hud label,
+  .lang-label {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .status-area {
+    padding: 6px 10px 8px;
+    min-height: 48px;
+  }
+
+  .hint,
+  .status-message,
+  #goal-message,
+  #status {
+    font-size: 11px;
+    line-height: 1.3;
   }
 }
