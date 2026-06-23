@@ -152,7 +152,7 @@ function render(appearingIndexes = [], fallingTiles = []) {
   const swapHintMap = new Map(swapHints.map((hint) => [hint.index, hint]));
   const neighborSet = selected !== null ? new Set(getNeighbors(selected)) : new Set();
   const fallingMap = new Map(
-    fallingTiles.map((info) => [info.toIndex, info.distance])
+    fallingTiles.map((info) => [info.toIndex, { distance: info.distance, delay: info.delay || 0 }])
   );
   board.forEach((value, i) => {
     const tile = document.createElement("button");
@@ -167,9 +167,10 @@ function render(appearingIndexes = [], fallingTiles = []) {
     }
 
     if (fallingMap.has(i)) {
-      const distance = fallingMap.get(i);
+      const { distance, delay } = fallingMap.get(i);
       if (distance > 0) {
         tile.style.setProperty("--drop-distance", distance);
+        tile.style.setProperty("--fall-delay", `${delay}ms`);
         tile.classList.add("falling");
         tile.addEventListener("animationend", () => tile.classList.remove("falling"), { once: true });
       }
@@ -466,6 +467,9 @@ function dropAndRefillState(state) {
 function dropAndRefill() {
   const appearing = [];
   const falling = [];
+  const FALL_BASE_DELAY = 60;
+  const FALL_DELAY_PER_STEP = 55;
+  const FALL_MAX_DELAY = 240;
 
   for (let c = 0; c < SIZE; c++) {
     const values = [];
@@ -485,10 +489,12 @@ function dropAndRefill() {
 
       board[target] = info.value;
       if (target !== index(from, c)) {
+        const distance = to - from;
         falling.push({
           fromIndex: index(from, c),
           toIndex: target,
-          distance: to - from,
+          distance,
+          delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + distance * FALL_DELAY_PER_STEP),
         });
       }
       write--;
@@ -498,10 +504,12 @@ function dropAndRefill() {
     for (let r = write; r >= 0; r--) {
       board[index(r, c)] = randomType();
       appearing.push(index(r, c));
+      const distance = spawnDistance;
       falling.push({
         fromIndex: index(r - spawnDistance, c),
         toIndex: index(r, c),
-        distance: spawnDistance,
+        distance,
+        delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + distance * FALL_DELAY_PER_STEP),
       });
     }
   }
@@ -688,7 +696,7 @@ async function settleBoard() {
     await flashRemoved(120);
     const { appearing, falling } = dropAndRefill();
     render(appearing, falling);
-    await flashRemoved(90);
+    await flashRemoved(760);
   }
 }
 

@@ -314,7 +314,9 @@ select:focus-visible {
 
 .tile.falling {
   transform: translateY(calc(-1 * var(--drop-distance) * (100% + var(--tile-gap))));
-  animation: tile-fall 190ms cubic-bezier(0.17, 0.89, 0.32, 1.2);
+  animation: tile-fall 460ms cubic-bezier(0.2, 1, 0.32, 1);
+  animation-delay: var(--fall-delay, 60ms);
+  animation-fill-mode: both;
 }
 
 .score-pop {
@@ -365,8 +367,15 @@ select:focus-visible {
 }
 
 @keyframes tile-fall {
-  0% {
+  0%,
+  18% {
     transform: translateY(calc(-1 * var(--drop-distance) * (100% + var(--tile-gap))));
+  }
+  84% {
+    transform: translateY(3px);
+  }
+  94% {
+    transform: translateY(-2px);
   }
   100% {
     transform: translateY(0);
