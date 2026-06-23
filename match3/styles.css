@@ -262,6 +262,20 @@ select:focus-visible {
   outline-offset: 1px;
 }
 
+.tile.swap-hint {
+  outline: 2px dashed rgba(34, 197, 94, 0.75);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 0 10px rgba(34, 197, 94, 0.35);
+}
+
+.tile.match-hint {
+  animation: match-pulse 900ms ease-out infinite;
+}
+
+.tile.invalid-swap {
+  animation: invalid-shake 240ms ease-in-out;
+}
+
 .tile:focus-visible {
   outline: 3px solid rgba(56, 189, 248, 0.85);
   outline-offset: 2px;
@@ -350,6 +364,39 @@ select:focus-visible {
   }
   80% {
     transform: translateX(2px);
+  }
+}
+
+@keyframes match-pulse {
+  0% {
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3), 0 0 0 rgba(34, 197, 94, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3), 0 0 18px rgba(34, 197, 94, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3), 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes invalid-shake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
   }
 }
 

@@ -148,6 +148,9 @@ function getNeighbors(i) {
 function render(appearingIndexes = []) {
   boardEl.innerHTML = "";
   const appearing = new Set(appearingIndexes);
+  const swapHints = selected !== null ? getSwappableMatchHints(selected) : [];
+  const swapHintSet = new Set(swapHints);
+  const neighborSet = selected !== null ? new Set(getNeighbors(selected)) : new Set();
   board.forEach((value, i) => {
     const tile = document.createElement("button");
     tile.type = "button";
@@ -175,6 +178,21 @@ function render(appearingIndexes = []) {
   if (selected !== null && boardEl.children[selected]) {
     boardEl.children[selected].setAttribute("aria-label", `${t("cell-label")} ${selected + 1} (${t("aria-selected")})`);
     boardEl.children[selected].classList.add("selected");
+
+    for (const index of neighborSet) {
+      const tile = boardEl.children[index];
+      if (!tile) continue;
+      tile.classList.add("swap-hint");
+    }
+
+    if (swapHintSet.size > 0) {
+      for (const index of swapHintSet) {
+        const tile = boardEl.children[index];
+        if (!tile) continue;
+        tile.classList.remove("swap-hint");
+        tile.classList.add("match-hint");
+      }
+    }
   }
 }
 
@@ -307,6 +325,42 @@ function flashNoMatch(index) {
   tile.addEventListener("animationend", () => tile.classList.remove("shake"), { once: true });
 }
 
+function flashInvalidSwap(from, to) {
+  const a = boardEl.children[from];
+  const b = boardEl.children[to];
+  if (a) {
+    a.classList.add("invalid-swap");
+    a.addEventListener(
+      "animationend",
+      () => a.classList.remove("invalid-swap"),
+      { once: true }
+    );
+  }
+  if (b) {
+    b.classList.add("invalid-swap");
+    b.addEventListener(
+      "animationend",
+      () => b.classList.remove("invalid-swap"),
+      { once: true }
+    );
+  }
+}
+
+function getSwappableMatchHints(index) {
+  const neighbors = getNeighbors(index);
+  const matchHints = [];
+
+  for (const next of neighbors) {
+    swap(index, next);
+    if (findMatches().length > 0) {
+      matchHints.push(next);
+    }
+    swap(index, next);
+  }
+
+  return matchHints;
+}
+
 async function executeSwap(from, to) {
   if (locked || !canSwap(from, to)) return;
 
@@ -319,6 +373,7 @@ async function executeSwap(from, to) {
   const matches = findMatches();
   if (matches.length === 0) {
     flashNoMatch(from);
+    flashInvalidSwap(from, to);
     await animateSwapTiles(from, to);
     swap(from, to);
     render();
