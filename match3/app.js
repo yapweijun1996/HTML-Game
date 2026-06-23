@@ -149,7 +149,7 @@ function render(appearingIndexes = []) {
   boardEl.innerHTML = "";
   const appearing = new Set(appearingIndexes);
   const swapHints = selected !== null ? getSwappableMatchHints(selected) : [];
-  const swapHintSet = new Set(swapHints);
+  const swapHintMap = new Map(swapHints.map((hint) => [hint.index, hint]));
   const neighborSet = selected !== null ? new Set(getNeighbors(selected)) : new Set();
   board.forEach((value, i) => {
     const tile = document.createElement("button");
@@ -185,12 +185,21 @@ function render(appearingIndexes = []) {
       tile.classList.add("swap-hint");
     }
 
-    if (swapHintSet.size > 0) {
-      for (const index of swapHintSet) {
+    if (swapHintMap.size > 0) {
+      for (const [index, hint] of swapHintMap.entries()) {
         const tile = boardEl.children[index];
         if (!tile) continue;
         tile.classList.remove("swap-hint");
         tile.classList.add("match-hint");
+
+        const badge = document.createElement("span");
+        badge.className = "chain-badge";
+        badge.textContent = hint.chains > 1 ? `+${hint.removed} x${hint.chains}` : `+${hint.removed}`;
+        tile.setAttribute(
+          "aria-label",
+          `${t("cell-label")} ${index + 1} (preview +${hint.removed}, ${hint.chains} chain${hint.chains > 1 ? "s" : ""})`
+        );
+        tile.appendChild(badge);
       }
     }
   }
@@ -351,14 +360,101 @@ function getSwappableMatchHints(index) {
   const matchHints = [];
 
   for (const next of neighbors) {
-    swap(index, next);
-    if (findMatches().length > 0) {
-      matchHints.push(next);
+    const estimate = simulateSwapChain(index, next);
+    if (estimate && estimate.removed > 0) {
+      matchHints.push({
+        index: next,
+        removed: estimate.removed,
+        chains: estimate.chains,
+      });
     }
-    swap(index, next);
   }
 
   return matchHints;
+}
+
+function simulateSwapChain(from, to) {
+  if (!canSwap(from, to)) return null;
+
+  const state = [...board];
+  swapState(state, from, to);
+
+  let totalRemoved = 0;
+  let chains = 0;
+
+  while (true) {
+    const matches = findMatchesOnBoard(state);
+    if (matches.length === 0) break;
+
+    chains += 1;
+    totalRemoved += matches.length;
+    matches.forEach((index) => {
+      state[index] = null;
+    });
+    dropAndRefillState(state);
+  }
+
+  if (chains === 0) return null;
+
+  return {
+    removed: totalRemoved,
+    chains,
+  };
+}
+
+function findMatchesOnBoard(boardState) {
+  const matches = new Set();
+
+  for (let r = 0; r < SIZE; r++) {
+    let start = 0;
+    while (start < SIZE) {
+      let end = start + 1;
+      while (end < SIZE && boardState[index(r, end)] === boardState[index(r, start)]) end++;
+      if (end - start >= 3) {
+        for (let c = start; c < end; c++) matches.add(index(r, c));
+      }
+      start = end;
+    }
+  }
+
+  for (let c = 0; c < SIZE; c++) {
+    let start = 0;
+    while (start < SIZE) {
+      let end = start + 1;
+      while (end < SIZE && boardState[index(end, c)] === boardState[index(start, c)]) end++;
+      if (end - start >= 3) {
+        for (let r = start; r < end; r++) matches.add(index(r, c));
+      }
+      start = end;
+    }
+  }
+
+  return [...matches];
+}
+
+function dropAndRefillState(state) {
+  for (let c = 0; c < SIZE; c++) {
+    let write = SIZE - 1;
+    for (let r = SIZE - 1; r >= 0; r--) {
+      const i = index(r, c);
+      if (state[i] !== null) {
+        const target = index(write, c);
+        state[target] = state[i];
+        if (target !== i) state[i] = null;
+        write--;
+      }
+    }
+
+    for (let r = write; r >= 0; r--) {
+      state[index(r, c)] = randomType();
+    }
+  }
+}
+
+function swapState(state, i, j) {
+  const temp = state[i];
+  state[i] = state[j];
+  state[j] = temp;
 }
 
 async function executeSwap(from, to) {

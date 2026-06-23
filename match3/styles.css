@@ -270,6 +270,28 @@ select:focus-visible {
 
 .tile.match-hint {
   animation: match-pulse 900ms ease-out infinite;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.72), 0 0 16px rgba(96, 165, 250, 0.5);
+  animation-name: match-pulse, match-glow;
+  animation-duration: 900ms, 1200ms;
+  animation-timing-function: ease-out, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+}
+
+.chain-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 999px;
+  padding: 4px 6px;
+  color: #ecfeff;
+  background: linear-gradient(120deg, rgba(34, 211, 238, 0.95), rgba(59, 130, 246, 0.95));
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  box-shadow: 0 2px 8px rgba(14, 116, 144, 0.35);
+  font-weight: 700;
+  letter-spacing: 0;
+  pointer-events: none;
 }
 
 .tile.invalid-swap {
@@ -376,6 +398,18 @@ select:focus-visible {
   }
   100% {
     box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3), 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes match-glow {
+  0% {
+    filter: saturate(1);
+  }
+  50% {
+    filter: saturate(1.15);
+  }
+  100% {
+    filter: saturate(1);
   }
 }
 
