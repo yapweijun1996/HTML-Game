@@ -183,14 +183,14 @@ function startTurn() {
 }
 
 const appEl = document.querySelector(".app");
-const topbarEl = document.querySelector(".topbar");
+const hudZoneEl = document.querySelector(".hud-zone");
 const statusAreaEl = document.querySelector(".status-area");
 const boardWrapEl = document.querySelector(".board-wrap");
 let boardLayoutRaf = 0;
 
 function refreshBoardSize() {
   if (!appEl) return;
-  if (!topbarEl || !statusAreaEl || !boardWrapEl) return;
+  if (!hudZoneEl || !statusAreaEl || !boardWrapEl) return;
   if (boardLayoutRaf) return;
   boardLayoutRaf = requestAnimationFrame(() => {
     boardLayoutRaf = 0;
@@ -207,14 +207,26 @@ function refreshBoardSize() {
     const appPaddingH = parsePx(appStyle.paddingLeft) + parsePx(appStyle.paddingRight);
     const boardWrapPaddingV = parsePx(boardWrapStyle.paddingTop) + parsePx(boardWrapStyle.paddingBottom);
     const boardWrapPaddingH = parsePx(boardWrapStyle.paddingLeft) + parsePx(boardWrapStyle.paddingRight);
-    const appGap = parsePx(appStyle.rowGap) || parsePx(appStyle.gap);
+    const appGap = parsePx(appStyle.gap) || parsePx(appStyle.columnGap) || 12;
     const viewportWidth = window.visualViewport?.width || window.innerWidth;
     const viewportHeight = window.visualViewport?.height || window.innerHeight;
 
-    const measuredBoardWrap = Math.max(220, Math.floor(viewportWidth - appPaddingH - 8), Math.floor(boardWrapEl.clientWidth - boardWrapPaddingH));
-    const reservedHeight = appPaddingV + boardWrapPaddingV + appGap * 2 + topbarEl.getBoundingClientRect().height + statusAreaEl.getBoundingClientRect().height + 12;
-    const sizeByHeight = Math.max(220, Math.floor(Math.min(viewportHeight, window.innerHeight) - reservedHeight));
-    const computedSize = Math.min(sizeByHeight, measuredBoardWrap);
+    const isSidebar = viewportWidth >= 1024;
+    let computedSize;
+
+    if (isSidebar) {
+      const sidebarWidth = 280 + appGap;
+      const availW = Math.floor(viewportWidth - appPaddingH - sidebarWidth - boardWrapPaddingH);
+      const availH = Math.floor(viewportHeight - appPaddingV - boardWrapPaddingV);
+      computedSize = Math.max(220, Math.min(availW, availH, 560));
+    } else {
+      const hudZoneH = hudZoneEl.getBoundingClientRect().height;
+      const statusH = statusAreaEl.getBoundingClientRect().height;
+      const reservedHeight = appPaddingV + boardWrapPaddingV + appGap * 2 + hudZoneH + statusH + 12;
+      const sizeByHeight = Math.max(220, Math.floor(Math.min(viewportHeight, window.innerHeight) - reservedHeight));
+      const sizeByWidth = Math.max(220, Math.floor(viewportWidth - appPaddingH - boardWrapPaddingH));
+      computedSize = Math.min(sizeByHeight, sizeByWidth, 560);
+    }
 
     appEl.style.setProperty("--board-size-by-view", `${Math.floor(computedSize)}px`);
   });

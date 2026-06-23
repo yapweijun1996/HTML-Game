@@ -112,17 +112,16 @@
   box-shadow:
     0 0 0 2px rgba(96, 165, 250, 0.72),
     0 0 14px rgba(96, 165, 250, 0.35);
-  animation: match-pulse 900ms ease-out infinite;
-  animation-name: match-pulse, match-glow;
-  animation-duration: 900ms, 1200ms;
-  animation-timing-function: ease-out, ease-in-out;
-  animation-iteration-count: infinite, infinite;
+  animation:
+    match-pulse 900ms ease-out infinite,
+    match-glow 1200ms ease-in-out infinite;
 }
 
 .chain-badge {
   position: absolute;
   top: 5px;
   right: 5px;
+  z-index: 2;
   min-width: 2.1rem;
   min-height: 1.3rem;
   padding: 3px 8px;
@@ -356,5 +355,11 @@
 
   .tile {
     font-size: clamp(1.85rem, 2.6vw, 2.05rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .board-wrap {
+    padding: var(--space-4);
   }
 }

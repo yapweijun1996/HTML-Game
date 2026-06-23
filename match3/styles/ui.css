@@ -1,10 +1,19 @@
-.topbar {
+/* ── HUD zone: wraps title-block + hud section ── */
+.hud-zone {
   display: grid;
-  grid-template-columns: 1fr minmax(185px, 1fr);
-  align-items: start;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
+/* Tablet: title left, hud right */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .hud-zone {
+    grid-template-columns: 1fr minmax(200px, 1fr);
+    align-items: start;
+    gap: var(--space-3);
+  }
+}
+
+/* ── Shared surface styles ── */
 .title-block,
 .hud,
 .status-area {
@@ -13,9 +22,17 @@
   border-radius: var(--radius-md);
 }
 
+/* ── Title block ── */
 .title-block {
   padding: var(--space-2) var(--space-3);
   min-height: clamp(56px, 12vh, 88px);
+}
+
+/* Hide on mobile — board space is more valuable */
+@media (max-width: 640px) {
+  .title-block {
+    display: none;
+  }
 }
 
 .badge {
@@ -50,6 +67,7 @@
   margin-top: 8px;
 }
 
+/* ── HUD panel ── */
 .hud {
   width: 100%;
   display: grid;
@@ -57,10 +75,17 @@
   padding: var(--space-3);
 }
 
+/* ── Stat grid: 2×2 default, 4-in-a-row on mobile ── */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-1);
+}
+
+@media (max-width: 640px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .score-box {
@@ -72,11 +97,25 @@
   min-height: clamp(46px, 9vh, 58px);
 }
 
+@media (max-width: 640px) {
+  .score-box {
+    min-height: 48px;
+    padding: 5px 6px;
+  }
+}
+
 .score-box span {
   display: block;
   color: var(--color-text-soft);
   font-size: 12px;
   margin-bottom: 4px;
+}
+
+@media (max-width: 640px) {
+  .score-box span {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
 }
 
 .score-box strong {
@@ -87,17 +126,74 @@
   letter-spacing: 0.01em;
 }
 
-.control-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+@media (max-width: 640px) {
+  .score-box strong {
+    font-size: clamp(1rem, 4vw, 1.3rem);
+  }
+}
+
+/* ── Primary control row: Replay | Next Level | Main Menu ──
+   Flexbox: hidden button takes no space, no dead column      */
+.control-row--primary {
+  display: flex;
   gap: var(--space-2);
 }
 
-.control-row--primary,
+#restart    { flex: 2 1 0; }
+#next-level { flex: 1 1 0; }
+#main-menu  { flex: 1 1 0; }
+
+/* ── Secondary control row: Hint | [Input mode label + select] ── */
 .control-row--secondary {
-  grid-template-columns: 2fr 1fr 1fr;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
 }
 
+#hint {
+  flex: 0 0 auto;
+  min-width: 64px;
+}
+
+.mode-pair {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.mode-pair label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #c3d3f7;
+  margin: 0;
+}
+
+.mode-pair select {
+  flex: 1;
+}
+
+/* ── Language pair: label + select side by side ── */
+.lang-pair {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lang-pair label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #c3d3f7;
+  margin: 0;
+}
+
+.lang-pair select {
+  flex: 1;
+}
+
+/* ── Shared button + select styles ── */
 select,
 button {
   width: 100%;
@@ -153,18 +249,13 @@ button:active {
   color: #dbeafe;
 }
 
-.hud label {
-  display: block;
-  margin: 2px 0 6px;
-  color: #c3d3f7;
-  font-size: 13px;
-}
-
 .hud select,
-.control-row select {
-  min-height: 44px;
+.mode-pair select,
+.lang-pair select {
+  min-height: 40px;
 }
 
+/* ── Status area ── */
 .status-area {
   padding: var(--space-3);
   min-height: clamp(48px, 9vh, 68px);
@@ -223,6 +314,8 @@ button:active {
   padding: 8px;
   border: 1px solid rgba(56, 189, 248, 0.24);
   background: rgba(10, 19, 42, 0.36);
+  max-height: 120px;
+  overflow-y: auto;
 }
 
 .achievements-list {
@@ -290,6 +383,7 @@ button:active {
   }
 }
 
+/* ── Mobile body padding ── */
 @media (max-width: 900px) {
   body {
     padding:
@@ -309,87 +403,25 @@ button:active {
   }
 }
 
-@media (max-width: 540px) {
-  .topbar {
-    grid-template-columns: 1fr;
-    gap: var(--space-2);
-  }
-
-  .title-block {
-    min-height: 50px;
-    padding: var(--space-2) var(--space-3);
-  }
-
+/* ── Compact adjustments for short viewports ── */
+@media (max-height: 700px) and (max-width: 1023px) {
   .hud {
-    padding: var(--space-3);
-  }
-
-  .title-copy .subtitle {
-    display: none;
-  }
-
-  .control-row--secondary {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .control-row--primary {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .hint,
-  .status-message,
-  #goal-message,
-  #status {
-    font-size: 12px;
-  }
-
-  .status-area {
-    padding: 8px var(--space-3) 10px;
-    min-height: 52px;
-    gap: 4px;
-  }
-}
-
-@media (max-height: 760px) {
-  .topbar {
-    grid-template-columns: 1fr;
-  }
-
-  .title-block {
-    padding: 7px 10px;
-    min-height: 72px;
-  }
-
-  .hud {
-    padding: 10px;
-    gap: 6px;
-  }
-
-  .stat-grid {
+    padding: 8px 10px;
     gap: 6px;
   }
 
   .score-box {
-    min-height: 48px;
-    padding: 6px 8px;
+    min-height: 44px;
+    padding: 5px 8px;
   }
 
   .score-box span {
+    font-size: 10px;
     margin-bottom: 2px;
-    font-size: 11px;
   }
 
   .score-box strong {
-    font-size: 1.24rem;
-  }
-
-  .control-row {
-    gap: 6px;
-  }
-
-  .control-row--primary,
-  .control-row--secondary {
-    grid-template-columns: 1fr 1fr;
+    font-size: 1.15rem;
   }
 
   button,
@@ -400,15 +432,10 @@ button:active {
     font-size: 13px;
   }
 
-  .hud label,
-  .lang-label {
-    font-size: 12px;
-    margin-bottom: 4px;
-  }
-
   .status-area {
     padding: 6px 10px 8px;
-    min-height: 48px;
+    min-height: 44px;
+    gap: 4px;
   }
 
   .hint,

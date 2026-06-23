@@ -48,7 +48,7 @@
   --tile-font-desktop: clamp(1.7rem, 4.4vw, 2.05rem);
   --tile-font-mobile: clamp(1.35rem, 4.8vw, 2.05rem);
   --board-max: clamp(360px, 84vw, 560px);
-  --board-size-fallback: clamp(220px, min(calc(100vw - 2 * var(--space-4)), calc(100dvh - 330px)), 560px);
+  --board-size-fallback: clamp(220px, calc(100vw - 2 * var(--space-4)), 560px);
 
   --duration-fast: 120ms;
   --duration-medium: 190ms;
