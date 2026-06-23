@@ -11,6 +11,8 @@ const ASSETS = [
   "./js/modules/game-store.js",
   "./js/modules/game-logic.js",
   "./js/modules/game-animations.js",
+  "./js/modules/game-flow.js",
+  "./js/modules/game-input.js",
   "./js/modules/game-ui.js",
   "./app.js",
   "./sw-register.js",

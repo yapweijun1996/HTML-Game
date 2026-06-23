@@ -33,6 +33,18 @@ const {
 } = Match3UI;
 
 const {
+  startTurn: flowStartTurn,
+  startLevel: flowStartLevel,
+  saveTutorialState: flowSaveTutorialState,
+  markTutorialAdvance: flowMarkTutorialAdvance,
+  completeLevelResult: flowCompleteLevelResult,
+} = Match3Flow;
+
+const {
+  createPointerHandlers,
+} = Match3Input;
+
+const {
   index: logicIndex,
   rowOf: logicRowOf,
   colOf: logicColOf,
@@ -167,59 +179,31 @@ function animateScorePop() {
 }
 
 function startTurn() {
-  uiState.selected = null;
-  uiState.activeHint = null;
-  gameState.levelResult = "playing";
-  uiState.statusMessage = "";
-  gameState.locked = false;
+  flowStartTurn(gameState, uiState);
 }
 
 function startLevel(level) {
-  const config = getLevelConfig(level);
-  gameState.level = Math.max(1, Math.floor(level) || 1);
-  gameState.movesLeft = config.moves;
-  gameState.targetScore = config.target;
-  gameState.score = 0;
-  gameState.typeCount = config.typeCount;
-  gameState.goalProgress = 0;
-  gameState.chainCount = 0;
-  gameState.lastMoveChains = 0;
-  gameState.lastMoveScore = 0;
-  gameState.invalidMovesInLevel = 0;
-  gameState.validMovesInLevel = 0;
-  gameState.hintUsedThisLevel = false;
-  gameState.levelResult = "playing";
-  gameState.board = new Array(SIZE * SIZE).fill(0);
-  gameState.inputMode = localStorage.getItem(STORAGE_KEYS.inputMode) || "drag";
-  fillBoardWithoutMatches();
-  gameState.tutorial = {
-    stage: gameState.tutorial.stage || 1,
-    completed: gameState.tutorial.completed,
-  };
-
+  flowStartLevel({
+    state: gameState,
+    progress: gameProgress,
+    level,
+    getLevelConfig,
+    fillBoardWithoutMatches: () => fillBoardWithoutMatches(),
+    getInputMode: () => localStorage.getItem(STORAGE_KEYS.inputMode) || "drag",
+    saveProgress: () => saveStateJson(STORAGE_KEYS.progress, gameProgress),
+  });
   startTurn();
-  gameProgress.currentLevel = gameState.level;
-  if (gameProgress.highestUnlockedLevel < gameState.level) {
-    gameProgress.highestUnlockedLevel = gameState.level;
-  }
-  saveStateJson(STORAGE_KEYS.progress, gameProgress);
   setStatusLine("");
   render();
   updateStatus();
 }
 
 function saveTutorialState() {
-  saveStateJson(STORAGE_KEYS.tutorial, gameState.tutorial);
+  flowSaveTutorialState(gameState, (tutorialState) => saveStateJson(STORAGE_KEYS.tutorial, tutorialState));
 }
 
 function markTutorialAdvance() {
-  if (gameState.tutorial.completed) return;
-  if (gameState.tutorial.stage === 1) {
-    gameState.tutorial.stage = 2;
-  } else if (gameState.tutorial.stage === 2) {
-    gameState.tutorial.completed = true;
-  }
-  saveTutorialState();
+  flowMarkTutorialAdvance(gameState, saveTutorialState);
 }
 
 const index = (row, col) => logicIndex(row, col);
@@ -455,66 +439,31 @@ function render(appearingIndexes = [], fallingTiles = []) {
 
 const getSwipeTarget = (fromIndex, dx, dy) => logicGetSwipeTarget(fromIndex, dx, dy);
 
-function handleTilePointerDown(index, event) {
-  if (!canInteract()) return;
-  if (event.button !== 0 && event.button !== -1) return;
-  event.preventDefault();
-  uiState.pointerState = {
-    pointerId: event.pointerId,
-    index,
-    x: event.clientX,
-    y: event.clientY,
-  };
-  tileSetDragState(index, true);
-}
+const pointerHandlers = createPointerHandlers({
+  uiState,
+  canInteract: () => canInteract(),
+  shouldSwipe: (dx, dy) => {
+    const abs = Math.max(Math.abs(dx), Math.abs(dy));
+    return gameState.inputMode === "drag" ? abs >= SWIPE_THRESHOLD : abs >= TAP_THRESHOLD;
+  },
+  getSwipeTarget,
+  setDragState: (index, active) => Match3Animations.setTileDragState(boardEl, index, active),
+  applyMove,
+  handleCellClick,
+});
 
-function handleTilePointerUp(index, event) {
-  if (!uiState.pointerState || event.pointerId !== uiState.pointerState.pointerId) {
-    clearPointerState();
-    return;
-  }
+const handleTilePointerDown = pointerHandlers.handleTilePointerDown;
 
-  tileSetDragState(uiState.pointerState.index, false);
-  const dx = event.clientX - uiState.pointerState.x;
-  const dy = event.clientY - uiState.pointerState.y;
-  const abs = Math.max(Math.abs(dx), Math.abs(dy));
-  const shouldSwipe = gameState.inputMode === "drag" ? abs >= SWIPE_THRESHOLD : abs >= TAP_THRESHOLD;
-  const target = shouldSwipe ? getSwipeTarget(uiState.pointerState.index, dx, dy) : null;
+const handleTilePointerUp = pointerHandlers.handleTilePointerUp;
 
-  if (target !== null) {
-    uiState.suppressNextClick = true;
-    void applyMove(uiState.pointerState.index, target);
-    clearPointerState();
-    return;
-  }
-
-  if (uiState.pointerState.index === index) {
-    uiState.suppressNextClick = true;
-    void handleCellClick(index);
-  }
-  clearPointerState();
-}
-
-const tileSetDragState = (index, active) => Match3Animations.setTileDragState(boardEl, index, active);
-
-function clearPointerState() {
-  if (!uiState.pointerState) return;
-  tileSetDragState(uiState.pointerState.index, false);
-  uiState.pointerState = null;
-}
+const clearPointerState = pointerHandlers.clearPointerState;
 
 function completeLevelResult(result) {
+  flowCompleteLevelResult(gameState, gameProgress, result, () => saveStateJson(STORAGE_KEYS.progress, gameProgress));
   if (result === "won") {
-    gameState.levelResult = "won";
-    gameProgress.totalWins += 1;
-    if (gameProgress.highestUnlockedLevel < gameState.level + 1) {
-      gameProgress.highestUnlockedLevel = gameState.level + 1;
-    }
-    saveStateJson(STORAGE_KEYS.progress, gameProgress);
     setGoalText(t("goal-success"));
     setStatusLine("");
   } else {
-    gameState.levelResult = "lost";
     setGoalText(t("goal-fail"));
     setStatusLine(t("status-no-match"));
   }
