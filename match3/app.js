@@ -10,6 +10,7 @@ const localeSelect = document.getElementById("locale");
 const tNodes = document.querySelectorAll("[data-i18n]");
 const tAriaNodes = document.querySelectorAll("[data-i18n-aria]");
 const boardAria = document.querySelector("#board");
+const SWIPE_THRESHOLD = 18;
 
 const I18N = {
   en: {
@@ -114,6 +115,8 @@ const board = new Array(SIZE * SIZE);
 let selected = null;
 let locked = false;
 let score = 0;
+let pointerState = null;
+let suppressNextClick = false;
 
 function randomType() {
   return Math.floor(Math.random() * TYPES);
@@ -156,7 +159,16 @@ function render(appearingIndexes = []) {
       tile.classList.add("appearing");
       tile.addEventListener("animationend", () => tile.classList.remove("appearing"), { once: true });
     }
-    tile.addEventListener("click", () => handleCellClick(i));
+    tile.addEventListener("click", () => {
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        return;
+      }
+      handleCellClick(i);
+    });
+    tile.addEventListener("pointerdown", (event) => handleTilePointerDown(i, event));
+    tile.addEventListener("pointerup", (event) => handleTilePointerUp(i, event));
+    tile.addEventListener("pointercancel", clearPointerState);
     boardEl.appendChild(tile);
   });
 
@@ -164,6 +176,74 @@ function render(appearingIndexes = []) {
     boardEl.children[selected].setAttribute("aria-label", `${t("cell-label")} ${selected + 1} (${t("aria-selected")})`);
     boardEl.children[selected].classList.add("selected");
   }
+}
+
+function getSwipeTarget(fromIndex, dx, dy) {
+  const r = rowOf(fromIndex);
+  const c = colOf(fromIndex);
+
+  if (Math.abs(dx) < Math.abs(dy)) {
+    if (dy > SWIPE_THRESHOLD && r < SIZE - 1) return index(r + 1, c);
+    if (dy < -SWIPE_THRESHOLD && r > 0) return index(r - 1, c);
+    return null;
+  }
+
+  if (dx > SWIPE_THRESHOLD && c < SIZE - 1) return index(r, c + 1);
+  if (dx < -SWIPE_THRESHOLD && c > 0) return index(r, c - 1);
+  return null;
+}
+
+function handleTilePointerDown(index, event) {
+  if (locked || (event.button !== 0 && event.button !== -1)) return;
+  event.preventDefault();
+
+  pointerState = {
+    pointerId: event.pointerId,
+    index,
+    x: event.clientX,
+    y: event.clientY,
+  };
+  tileSetDragState(index, true);
+}
+
+function handleTilePointerUp(index, event) {
+  if (!pointerState || event.pointerId !== pointerState.pointerId) {
+    clearPointerState();
+    return;
+  }
+
+  tileSetDragState(pointerState.index, false);
+
+  const dx = event.clientX - pointerState.x;
+  const dy = event.clientY - pointerState.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const target = getSwipeTarget(pointerState.index, dx, dy);
+
+  if (distance > 6 && target !== null) {
+    suppressNextClick = true;
+    executeSwap(pointerState.index, target);
+    clearPointerState();
+    return;
+  }
+
+  if (pointerState.index === index) {
+    suppressNextClick = true;
+    handleCellClick(index);
+  }
+
+  clearPointerState();
+}
+
+function tileSetDragState(index, active) {
+  const tile = boardEl.children[index];
+  if (!tile) return;
+  tile.classList.toggle("dragging", active);
+}
+
+function clearPointerState() {
+  if (!pointerState) return;
+  tileSetDragState(pointerState.index, false);
+  pointerState = null;
 }
 
 function animateSwapTiles(a, b) {
@@ -225,6 +305,33 @@ function flashNoMatch(index) {
   if (!tile) return;
   tile.classList.add("shake");
   tile.addEventListener("animationend", () => tile.classList.remove("shake"), { once: true });
+}
+
+async function executeSwap(from, to) {
+  if (locked || !canSwap(from, to)) return;
+
+  selected = null;
+  locked = true;
+  await animateSwapTiles(from, to);
+  swap(from, to);
+  render();
+
+  const matches = findMatches();
+  if (matches.length === 0) {
+    flashNoMatch(from);
+    await animateSwapTiles(from, to);
+    swap(from, to);
+    render();
+    statusEl.textContent = t("status-no-match");
+    await flashRemoved(500);
+    statusEl.textContent = "";
+    locked = false;
+    return;
+  }
+
+  statusEl.textContent = "";
+  await settleBoard();
+  locked = false;
 }
 
 function hasMatchAt(i) {
@@ -394,30 +501,7 @@ async function handleCellClick(i) {
     return;
   }
 
-  const a = selected;
-  const b = i;
-  selected = null;
-  locked = true;
-  await animateSwapTiles(a, b);
-  swap(a, b);
-  render();
-
-  const matches = findMatches();
-  if (matches.length === 0) {
-    flashNoMatch(a);
-    await animateSwapTiles(a, b);
-    swap(a, b);
-    render();
-    statusEl.textContent = t("status-no-match");
-    await flashRemoved(500);
-    statusEl.textContent = "";
-    locked = false;
-    return;
-  }
-
-  statusEl.textContent = "";
-  await settleBoard();
-  locked = false;
+  await executeSwap(selected, i);
 }
 
 function restart() {

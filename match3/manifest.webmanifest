@@ -6,7 +6,7 @@
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "description": "Offline-ready Match-3 puzzle game.",
-  "orientation": "portrait",
+  "orientation": "any",
   "lang": "en-US",
   "scope": "./",
   "icons": [
