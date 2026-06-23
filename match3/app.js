@@ -426,6 +426,7 @@ function render(appearingIndexes = [], fallingTiles = []) {
     });
     tile.addEventListener("pointerdown", (event) => handleTilePointerDown(i, event));
     tile.addEventListener("pointerup", (event) => handleTilePointerUp(i, event));
+    tile.addEventListener("pointermove", (event) => handleTilePointerMove(i, event));
     tile.addEventListener("pointercancel", clearPointerState);
     boardEl.appendChild(tile);
   }
@@ -477,6 +478,25 @@ function render(appearingIndexes = [], fallingTiles = []) {
   refreshBoardSize();
 }
 
+function setTileDragOffset(index, dx, dy) {
+  const tile = boardEl.children[index];
+  if (!tile) return;
+
+  const rect = tile.getBoundingClientRect();
+  const maxX = Math.max(0, rect.width - 2);
+  const maxY = Math.max(0, rect.height - 2);
+  const clamp = (value, limit) => {
+    const safe = Number.isFinite(value) ? value : 0;
+    return Math.max(-limit, Math.min(limit, safe));
+  };
+
+  const clampedX = clamp(dx, maxX);
+  const clampedY = clamp(dy, maxY);
+
+  tile.style.setProperty("--drag-offset-x", `${Math.round(clampedX)}px`);
+  tile.style.setProperty("--drag-offset-y", `${Math.round(clampedY)}px`);
+}
+
 const getSwipeTarget = (fromIndex, dx, dy) => logicGetSwipeTarget(fromIndex, dx, dy);
 
 const pointerHandlers = createPointerHandlers({
@@ -488,6 +508,7 @@ const pointerHandlers = createPointerHandlers({
   },
   getSwipeTarget,
   setDragState: (index, active) => Match3Animations.setTileDragState(boardEl, index, active),
+  setDragOffset: setTileDragOffset,
   applyMove,
   handleCellClick,
 });
@@ -495,6 +516,8 @@ const pointerHandlers = createPointerHandlers({
 const handleTilePointerDown = pointerHandlers.handleTilePointerDown;
 
 const handleTilePointerUp = pointerHandlers.handleTilePointerUp;
+
+const handleTilePointerMove = pointerHandlers.handleTilePointerMove;
 
 const clearPointerState = pointerHandlers.clearPointerState;
 

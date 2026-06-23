@@ -31,6 +31,8 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
+  --drag-offset-x: 0px;
+  --drag-offset-y: 0px;
   display: grid;
   place-items: center;
   user-select: none;
@@ -89,6 +91,10 @@
 .tile.dragging {
   outline: 2px solid rgba(250, 204, 21, 0.95);
   outline-offset: 1px;
+}
+
+.tile.dragging {
+  transform: translate(var(--drag-offset-x), var(--drag-offset-y));
 }
 
 .tile.swap-hint,
