@@ -1,8 +1,15 @@
-const CACHE_NAME = "sanseh-match3-v1";
+const CACHE_NAME = "sanseh-match3-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./js/config.js",
+  "./js/i18n.js",
+  "./styles/base.css",
+  "./styles/board.css",
+  "./styles/ui.css",
+  "./js/modules/game-store.js",
+  "./js/modules/game-ui.js",
   "./app.js",
   "./sw-register.js",
   "./manifest.webmanifest",
@@ -50,7 +57,7 @@ self.addEventListener("fetch", (event) => {
       if (event.request.mode === "navigate") {
         return caches.match("./index.html");
       }
-      return new Response("离线状态下无法加载该资源", {
+      return new Response("Offline: unable to load this resource.", {
         status: 503,
         statusText: "Service Unavailable",
       });

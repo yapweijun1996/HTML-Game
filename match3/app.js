@@ -1,107 +1,144 @@
-const SIZE = 8;
-const TYPES = 6;
-const SYMBOLS = ["◆", "◉", "▲", "★", "●", "✦"];
-const boardEl = document.getElementById("board");
-const scoreEl = document.getElementById("score");
-const scoreBox = document.getElementById("score-box");
-const statusEl = document.getElementById("status");
-const restartBtn = document.getElementById("restart");
-const localeSelect = document.getElementById("locale");
-const tNodes = document.querySelectorAll("[data-i18n]");
-const tAriaNodes = document.querySelectorAll("[data-i18n-aria]");
-const boardAria = document.querySelector("#board");
-const SWIPE_THRESHOLD = 18;
+/* Game logic moved into modular structure */
 
-const I18N = {
-  en: {
-    "title": "Match-3",
-    "subtitle": "Tap a tile, then tap an adjacent tile to swap. Keep chains alive for bigger multipliers.",
-    "locale-label": "Language",
-    "score-label": "Score",
-    "restart": "New game",
-    "hint": "Tip: install to home screen for instant play, even offline.",
-    "status-no-match": "No chain formed. Try another move.",
-    "cell-label": "Tile",
-    "board-label": "Game board",
-    "aria-selected": "Selected",
-    "loading": "Loading"
-  },
-  zh: {
-    "title": "三消",
-    "subtitle": "点击一个方块，再点击相邻方块交换；持续连消可获得更高倍率。",
-    "locale-label": "语言",
-    "score-label": "分数",
-    "restart": "重新开始",
-    "hint": "小贴士：安装到主屏幕后可离线快速启动。",
-    "status-no-match": "本次未形成连消，请再试一次。",
-    "cell-label": "方块",
-    "board-label": "游戏棋盘",
-    "aria-selected": "已选中",
-    "loading": "加载中"
-  },
-  ms: {
-    "title": "Match-3",
-    "subtitle": "Ketik satu jubin, kemudian ketik yang bersebelahan untuk menukar. Pertahankan rantaian untuk bonus berulang.",
-    "locale-label": "Bahasa",
-    "score-label": "Markah",
-    "restart": "Main Baru",
-    "hint": "Tip: pasang ke skrin utama untuk main terus, walaupun di luar talian.",
-    "status-no-match": "Tiada rantaian dibuat. Cuba langkah lain.",
-    "cell-label": "Jubin",
-    "board-label": "Papan permainan",
-    "aria-selected": "Dipilih",
-    "loading": "Memuatkan"
-  }
-};
+const {
+  gameState,
+  gameProgress,
+  tutorialState,
+  achievementState,
+  state: uiState,
+  saveStateJson,
+  getLevelConfig,
+} = Match3Store;
 
-const SUPPORTED_LOCALES = Object.keys(I18N);
-
-function getBrowserLocale() {
-  const nav = (navigator.language || "en").toLowerCase();
-  if (nav.startsWith("zh")) return "zh";
-  if (nav.startsWith("ms") || nav.startsWith("id")) return "ms";
-  return "en";
-}
-
-function resolveLocale() {
-  const saved = localStorage.getItem("match3.locale");
-  if (saved && SUPPORTED_LOCALES.includes(saved)) return saved;
-  return getBrowserLocale();
-}
-
-function t(key) {
-  return I18N[currentLocale][key] || I18N.en[key] || key;
-}
+const {
+  boardEl,
+  statusEl,
+  statusHintEl,
+  goalMessageEl,
+  levelEl,
+  movesLeftEl,
+  targetScoreEl,
+  goalProgressEl,
+  scoreBox,
+  localeSelect,
+  inputModeSelect,
+  restartBtn,
+  nextLevelBtn,
+  mainMenuBtn,
+  hintBtn,
+  achievementList,
+  tNodes,
+  tAriaNodes,
+  boardAria,
+} = Match3UI;
 
 let currentLocale = resolveLocale();
 
-function applyLocaleText() {
-  tNodes.forEach((node) => {
-    const key = node.getAttribute("data-i18n");
-    if (key) node.textContent = t(key);
-  });
+gameState.tutorial = {
+  stage: Number(tutorialState.stage) || 1,
+  completed: !!tutorialState.completed,
+};
+gameState.inputMode = localStorage.getItem(STORAGE_KEYS.inputMode) || "drag";
+gameState.locale = currentLocale;
+if (gameState.tutorial.stage < 1 || gameState.tutorial.stage > 2) {
+  gameState.tutorial.stage = 1;
+}
 
-  tAriaNodes.forEach((node) => {
-    const key = node.getAttribute("data-i18n-aria");
-    if (key) node.setAttribute("aria-label", t(key));
-  });
+function getChainMultiplier(chainIndex) {
+  return chainIndex >= 4 ? 4 : chainIndex;
+}
 
-  if (boardAria) boardAria.setAttribute("aria-label", t("board-label"));
+function evaluateMatchScore(matches, chainIndex) {
+  return matches * 10 * getChainMultiplier(chainIndex);
+}
 
-  localeSelect.value = currentLocale;
-  document.documentElement.lang = currentLocale === "zh" ? "zh-CN" : currentLocale === "ms" ? "ms-MY" : "en";
+function isGoalReached() {
+  return gameState.goalProgress >= gameState.targetScore;
+}
 
-  if (selected !== null && boardEl.children[selected]) {
-    boardEl.children[selected].setAttribute("aria-label", `${t("cell-label")} ${selected + 1} (${t("aria-selected")})`);
-  }
+function isOutOfMoves() {
+  return gameState.movesLeft <= 0;
 }
 
 function setLocale(locale) {
   if (!SUPPORTED_LOCALES.includes(locale)) locale = "en";
   currentLocale = locale;
-  localStorage.setItem("match3.locale", locale);
+  gameState.locale = locale;
+  localStorage.setItem(STORAGE_KEYS.locale, locale);
   applyLocaleText();
   render();
+}
+
+function applyLocaleText() {
+  tNodes.forEach((node) => {
+    const key = node.getAttribute("data-i18n");
+    if (!key) return;
+    node.textContent = t(key);
+  });
+
+  tAriaNodes.forEach((node) => {
+    const key = node.getAttribute("data-i18n-aria");
+    if (!key) return;
+    node.setAttribute("aria-label", t(key));
+  });
+
+  if (boardAria) {
+    boardAria.setAttribute("aria-label", t("board-label"));
+  }
+
+  localeSelect.value = currentLocale;
+  inputModeSelect.value = gameState.inputMode;
+  inputModeSelect.querySelector("option[value='drag']").textContent = t("input-mode-drag");
+  inputModeSelect.querySelector("option[value='tap']").textContent = t("input-mode-tap");
+
+  if (uiState.selected !== null && boardEl.children[uiState.selected]) {
+    boardEl.children[uiState.selected].setAttribute("aria-label", `${t("cell-label")} ${uiState.selected + 1} (${t("aria-selected")})`);
+  }
+
+  document.documentElement.lang = currentLocale === "zh" ? "zh-CN" : currentLocale === "ms" ? "ms-MY" : "en";
+}
+
+function setStatusLine(text, clearHint = false) {
+  uiState.statusMessage = text || "";
+  if (!clearHint) {
+    statusEl.textContent = uiState.statusMessage;
+  }
+}
+
+function setGoalText(text) {
+  goalMessageEl.textContent = text || "";
+}
+
+function updateStatus() {
+  if (gameState.levelResult === "won") {
+    setGoalText(t("goal-success"));
+    setStatusLine("");
+    statusHintEl.textContent = t("next-level");
+    return;
+  }
+
+  if (gameState.levelResult === "lost") {
+    setGoalText(t("goal-fail"));
+    setStatusLine(t("status-no-match"));
+    return;
+  }
+
+  setGoalText("");
+  if (!gameState.tutorial.completed) {
+    if (gameState.tutorial.stage === 1) {
+      statusHintEl.textContent = t("tutorial-step1");
+    } else {
+      statusHintEl.textContent = t("tutorial-step2");
+    }
+  } else {
+    statusHintEl.textContent = `${t("moves-left")}: ${gameState.movesLeft} / ${t("target-score")}: ${gameState.targetScore}`;
+  }
+
+  if (uiState.statusMessage) {
+    setStatusLine(uiState.statusMessage);
+  } else {
+    statusEl.textContent = "";
+  }
 }
 
 function animateScorePop() {
@@ -111,15 +148,60 @@ function animateScorePop() {
   scoreBox.classList.add("score-pop");
 }
 
-const board = new Array(SIZE * SIZE);
-let selected = null;
-let locked = false;
-let score = 0;
-let pointerState = null;
-let suppressNextClick = false;
+function startTurn() {
+  uiState.selected = null;
+  uiState.activeHint = null;
+  gameState.levelResult = "playing";
+  uiState.statusMessage = "";
+  gameState.locked = false;
+}
 
-function randomType() {
-  return Math.floor(Math.random() * TYPES);
+function startLevel(level) {
+  const config = getLevelConfig(level);
+  gameState.level = Math.max(1, Math.floor(level) || 1);
+  gameState.movesLeft = config.moves;
+  gameState.targetScore = config.target;
+  gameState.score = 0;
+  gameState.typeCount = config.typeCount;
+  gameState.goalProgress = 0;
+  gameState.chainCount = 0;
+  gameState.lastMoveChains = 0;
+  gameState.lastMoveScore = 0;
+  gameState.invalidMovesInLevel = 0;
+  gameState.validMovesInLevel = 0;
+  gameState.hintUsedThisLevel = false;
+  gameState.levelResult = "playing";
+  gameState.board = new Array(SIZE * SIZE).fill(0);
+  gameState.inputMode = localStorage.getItem(STORAGE_KEYS.inputMode) || "drag";
+  fillBoardWithoutMatches();
+  gameState.tutorial = {
+    stage: gameState.tutorial.stage || 1,
+    completed: gameState.tutorial.completed,
+  };
+
+  startTurn();
+  gameProgress.currentLevel = gameState.level;
+  if (gameProgress.highestUnlockedLevel < gameState.level) {
+    gameProgress.highestUnlockedLevel = gameState.level;
+  }
+  saveStateJson(STORAGE_KEYS.progress, gameProgress);
+  setStatusLine("");
+  render();
+  updateStatus();
+}
+
+function saveTutorialState() {
+  saveStateJson(STORAGE_KEYS.tutorial, gameState.tutorial);
+}
+
+function markTutorialAdvance() {
+  if (gameState.tutorial.completed) return;
+  if (gameState.tutorial.stage === 1) {
+    gameState.tutorial.stage = 2;
+  } else if (gameState.tutorial.stage === 2) {
+    gameState.tutorial.completed = true;
+  }
+  saveTutorialState();
 }
 
 function index(row, col) {
@@ -134,6 +216,10 @@ function colOf(i) {
   return i % SIZE;
 }
 
+function randomType(typeCount = gameState.typeCount) {
+  return Math.floor(Math.random() * typeCount);
+}
+
 function getNeighbors(i) {
   const r = rowOf(i);
   const c = colOf(i);
@@ -145,161 +231,123 @@ function getNeighbors(i) {
   return out;
 }
 
-function render(appearingIndexes = [], fallingTiles = []) {
-  boardEl.innerHTML = "";
-  const appearing = new Set(appearingIndexes);
-  const swapHints = selected !== null ? getSwappableMatchHints(selected) : [];
-  const swapHintMap = new Map(swapHints.map((hint) => [hint.index, hint]));
-  const neighborSet = selected !== null ? new Set(getNeighbors(selected)) : new Set();
-  const fallingMap = new Map(
-    fallingTiles.map((info) => [info.toIndex, { distance: info.distance, delay: info.delay || 0 }])
-  );
-  board.forEach((value, i) => {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.className = `tile type-${value}`;
-    tile.dataset.index = String(i);
-    tile.setAttribute("aria-label", `${t("cell-label")} ${i + 1}`);
-    tile.textContent = SYMBOLS[value] || "⬤";
-    if (appearing.has(i)) {
-      tile.classList.add("appearing");
-      tile.addEventListener("animationend", () => tile.classList.remove("appearing"), { once: true });
-    }
+function canSwap(i, j) {
+  return getNeighbors(i).includes(j);
+}
 
-    if (fallingMap.has(i)) {
-      const { distance, delay } = fallingMap.get(i);
-      if (distance > 0) {
-        tile.style.setProperty("--drop-distance", distance);
-        tile.style.setProperty("--fall-delay", `${delay}ms`);
-        tile.classList.add("falling");
-        tile.addEventListener("animationend", () => tile.classList.remove("falling"), { once: true });
+function canInteract() {
+  return gameState.levelResult === "playing" && !gameState.locked;
+}
+
+function swapState(state, i, j) {
+  const temp = state[i];
+  state[i] = state[j];
+  state[j] = temp;
+}
+
+function hasMatchAt(i, state) {
+  const value = state[i];
+  if (value === null) return false;
+
+  const r = rowOf(i);
+  const c = colOf(i);
+
+  let count = 1;
+  for (let col = c - 1; col >= 0; col--) {
+    if (state[index(r, col)] === value) count++;
+    else break;
+  }
+  for (let col = c + 1; col < SIZE; col++) {
+    if (state[index(r, col)] === value) count++;
+    else break;
+  }
+  if (count >= 3) return true;
+
+  count = 1;
+  for (let row = r - 1; row >= 0; row--) {
+    if (state[index(row, c)] === value) count++;
+    else break;
+  }
+  for (let row = r + 1; row < SIZE; row++) {
+    if (state[index(row, c)] === value) count++;
+    else break;
+  }
+  return count >= 3;
+}
+
+function findMatchesOnBoard(state) {
+  const matches = new Set();
+
+  for (let r = 0; r < SIZE; r++) {
+    let start = 0;
+    while (start < SIZE) {
+      let end = start + 1;
+      while (end < SIZE && state[index(r, end)] === state[index(r, start)]) end++;
+      if (end - start >= 3) {
+        for (let c = start; c < end; c++) matches.add(index(r, c));
+      }
+      start = end;
+    }
+  }
+
+  for (let c = 0; c < SIZE; c++) {
+    let start = 0;
+    while (start < SIZE) {
+      let end = start + 1;
+      while (end < SIZE && state[index(end, c)] === state[index(start, c)]) end++;
+      if (end - start >= 3) {
+        for (let r = start; r < end; r++) matches.add(index(r, c));
+      }
+      start = end;
+    }
+  }
+
+  return [...matches];
+}
+
+function findMatches() {
+  return findMatchesOnBoard(gameState.board);
+}
+
+function hasMatches(state) {
+  return findMatchesOnBoard(state).length > 0;
+}
+
+function fillBoardWithoutMatches() {
+  for (let i = 0; i < gameState.board.length; i++) {
+    gameState.board[i] = randomType();
+  }
+
+  let attempts = 0;
+  while (hasMatches(gameState.board) && attempts < 150) {
+    for (let i = 0; i < gameState.board.length; i++) {
+      if (hasMatchAt(i, gameState.board)) {
+        gameState.board[i] = randomType();
       }
     }
-    tile.addEventListener("click", () => {
-      if (suppressNextClick) {
-        suppressNextClick = false;
-        return;
-      }
-      handleCellClick(i);
-    });
-    tile.addEventListener("pointerdown", (event) => handleTilePointerDown(i, event));
-    tile.addEventListener("pointerup", (event) => handleTilePointerUp(i, event));
-    tile.addEventListener("pointercancel", clearPointerState);
-    boardEl.appendChild(tile);
-  });
-
-  if (selected !== null && boardEl.children[selected]) {
-    boardEl.children[selected].setAttribute("aria-label", `${t("cell-label")} ${selected + 1} (${t("aria-selected")})`);
-    boardEl.children[selected].classList.add("selected");
-
-    for (const index of neighborSet) {
-      const tile = boardEl.children[index];
-      if (!tile) continue;
-      tile.classList.add("swap-hint");
-    }
-
-    if (swapHintMap.size > 0) {
-      for (const [index, hint] of swapHintMap.entries()) {
-        const tile = boardEl.children[index];
-        if (!tile) continue;
-        tile.classList.remove("swap-hint");
-        tile.classList.add("match-hint");
-
-        const badge = document.createElement("span");
-        badge.className = "chain-badge";
-        badge.textContent = hint.chains > 1 ? `+${hint.removed} x${hint.chains}` : `+${hint.removed}`;
-        tile.setAttribute(
-          "aria-label",
-          `${t("cell-label")} ${index + 1} (preview +${hint.removed}, ${hint.chains} chain${hint.chains > 1 ? "s" : ""})`
-        );
-        tile.appendChild(badge);
-      }
-    }
+    attempts++;
   }
 }
 
-function getSwipeTarget(fromIndex, dx, dy) {
-  const r = rowOf(fromIndex);
-  const c = colOf(fromIndex);
-
-  if (Math.abs(dx) < Math.abs(dy)) {
-    if (dy > SWIPE_THRESHOLD && r < SIZE - 1) return index(r + 1, c);
-    if (dy < -SWIPE_THRESHOLD && r > 0) return index(r - 1, c);
-    return null;
-  }
-
-  if (dx > SWIPE_THRESHOLD && c < SIZE - 1) return index(r, c + 1);
-  if (dx < -SWIPE_THRESHOLD && c > 0) return index(r, c - 1);
-  return null;
+function flashRemoved(ms = 120) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function handleTilePointerDown(index, event) {
-  if (locked || (event.button !== 0 && event.button !== -1)) return;
-  event.preventDefault();
+function animateSwapTiles(from, to) {
+  const fromEl = boardEl.children[from];
+  const toEl = boardEl.children[to];
+  if (!fromEl || !toEl) return Promise.resolve();
 
-  pointerState = {
-    pointerId: event.pointerId,
-    index,
-    x: event.clientX,
-    y: event.clientY,
-  };
-  tileSetDragState(index, true);
-}
-
-function handleTilePointerUp(index, event) {
-  if (!pointerState || event.pointerId !== pointerState.pointerId) {
-    clearPointerState();
-    return;
-  }
-
-  tileSetDragState(pointerState.index, false);
-
-  const dx = event.clientX - pointerState.x;
-  const dy = event.clientY - pointerState.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  const target = getSwipeTarget(pointerState.index, dx, dy);
-
-  if (distance > 6 && target !== null) {
-    suppressNextClick = true;
-    executeSwap(pointerState.index, target);
-    clearPointerState();
-    return;
-  }
-
-  if (pointerState.index === index) {
-    suppressNextClick = true;
-    handleCellClick(index);
-  }
-
-  clearPointerState();
-}
-
-function tileSetDragState(index, active) {
-  const tile = boardEl.children[index];
-  if (!tile) return;
-  tile.classList.toggle("dragging", active);
-}
-
-function clearPointerState() {
-  if (!pointerState) return;
-  tileSetDragState(pointerState.index, false);
-  pointerState = null;
-}
-
-function animateSwapTiles(a, b) {
-  const aEl = boardEl.children[a];
-  const bEl = boardEl.children[b];
-  if (!aEl || !bEl) return Promise.resolve();
-
-  const aRect = aEl.getBoundingClientRect();
-  const bRect = bEl.getBoundingClientRect();
-  const dx = bRect.left - aRect.left;
-  const dy = bRect.top - aRect.top;
+  const fromRect = fromEl.getBoundingClientRect();
+  const toRect = toEl.getBoundingClientRect();
+  const dx = toRect.left - fromRect.left;
+  const dy = toRect.top - fromRect.top;
 
   const end = new Promise((resolve) => {
     let done = false;
+
     const onTransitionEnd = (event) => {
-      if (event.target !== aEl && event.target !== bEl) return;
+      if (event.target !== fromEl && event.target !== toEl) return;
       if (event.propertyName !== "transform") return;
       if (done) return;
       done = true;
@@ -308,26 +356,25 @@ function animateSwapTiles(a, b) {
     };
 
     const cleanup = () => {
-      aEl.classList.remove("swapping");
-      bEl.classList.remove("swapping");
-      aEl.style.transform = "";
-      bEl.style.transform = "";
-      aEl.removeEventListener("transitionend", onTransitionEnd);
-      bEl.removeEventListener("transitionend", onTransitionEnd);
+      fromEl.classList.remove("swapping");
+      toEl.classList.remove("swapping");
+      fromEl.style.transform = "";
+      toEl.style.transform = "";
+      fromEl.removeEventListener("transitionend", onTransitionEnd);
+      toEl.removeEventListener("transitionend", onTransitionEnd);
     };
 
-    aEl.classList.add("swapping");
-    bEl.classList.add("swapping");
-    aEl.style.transform = `translate(${dx}px, ${dy}px)`;
-    bEl.style.transform = `translate(${-dx}px, ${-dy}px)`;
-
+    fromEl.classList.add("swapping");
+    toEl.classList.add("swapping");
+    fromEl.style.transform = `translate(${dx}px, ${dy}px)`;
+    toEl.style.transform = `translate(${-dx}px, ${-dy}px)`;
     requestAnimationFrame(() => {
-      aEl.style.transform = "";
-      bEl.style.transform = "";
+      fromEl.style.transform = "";
+      toEl.style.transform = "";
     });
 
-    aEl.addEventListener("transitionend", onTransitionEnd);
-    bEl.addEventListener("transitionend", onTransitionEnd);
+    fromEl.addEventListener("transitionend", onTransitionEnd);
+    toEl.addEventListener("transitionend", onTransitionEnd);
     setTimeout(() => {
       if (!done) {
         done = true;
@@ -340,8 +387,8 @@ function animateSwapTiles(a, b) {
   return end;
 }
 
-function flashNoMatch(index) {
-  const tile = boardEl.children[index];
+function flashNoMatch(i) {
+  const tile = boardEl.children[i];
   if (!tile) return;
   tile.classList.add("shake");
   tile.addEventListener("animationend", () => tile.classList.remove("shake"), { once: true });
@@ -350,116 +397,33 @@ function flashNoMatch(index) {
 function flashInvalidSwap(from, to) {
   const a = boardEl.children[from];
   const b = boardEl.children[to];
+
   if (a) {
     a.classList.add("invalid-swap");
-    a.addEventListener(
-      "animationend",
-      () => a.classList.remove("invalid-swap"),
-      { once: true }
-    );
+    a.addEventListener("animationend", () => a.classList.remove("invalid-swap"), { once: true });
   }
   if (b) {
     b.classList.add("invalid-swap");
-    b.addEventListener(
-      "animationend",
-      () => b.classList.remove("invalid-swap"),
-      { once: true }
-    );
+    b.addEventListener("animationend", () => b.classList.remove("invalid-swap"), { once: true });
   }
-}
-
-function getSwappableMatchHints(index) {
-  const neighbors = getNeighbors(index);
-  const matchHints = [];
-
-  for (const next of neighbors) {
-    const estimate = simulateSwapChain(index, next);
-    if (estimate && estimate.removed > 0) {
-      matchHints.push({
-        index: next,
-        removed: estimate.removed,
-        chains: estimate.chains,
-      });
-    }
-  }
-
-  return matchHints;
-}
-
-function simulateSwapChain(from, to) {
-  if (!canSwap(from, to)) return null;
-
-  const state = [...board];
-  swapState(state, from, to);
-
-  let totalRemoved = 0;
-  let chains = 0;
-
-  while (true) {
-    const matches = findMatchesOnBoard(state);
-    if (matches.length === 0) break;
-
-    chains += 1;
-    totalRemoved += matches.length;
-    matches.forEach((index) => {
-      state[index] = null;
-    });
-    dropAndRefillState(state);
-  }
-
-  if (chains === 0) return null;
-
-  return {
-    removed: totalRemoved,
-    chains,
-  };
-}
-
-function findMatchesOnBoard(boardState) {
-  const matches = new Set();
-
-  for (let r = 0; r < SIZE; r++) {
-    let start = 0;
-    while (start < SIZE) {
-      let end = start + 1;
-      while (end < SIZE && boardState[index(r, end)] === boardState[index(r, start)]) end++;
-      if (end - start >= 3) {
-        for (let c = start; c < end; c++) matches.add(index(r, c));
-      }
-      start = end;
-    }
-  }
-
-  for (let c = 0; c < SIZE; c++) {
-    let start = 0;
-    while (start < SIZE) {
-      let end = start + 1;
-      while (end < SIZE && boardState[index(end, c)] === boardState[index(start, c)]) end++;
-      if (end - start >= 3) {
-        for (let r = start; r < end; r++) matches.add(index(r, c));
-      }
-      start = end;
-    }
-  }
-
-  return [...matches];
 }
 
 function dropAndRefillState(state) {
   for (let c = 0; c < SIZE; c++) {
     let write = SIZE - 1;
+
     for (let r = SIZE - 1; r >= 0; r--) {
-      const i = index(r, c);
-      if (state[i] !== null) {
+      const source = index(r, c);
+      if (state[source] !== null) {
         const target = index(write, c);
-        state[target] = state[i];
-        if (target !== i) state[i] = null;
+        state[target] = state[source];
+        if (target !== source) state[source] = null;
         write--;
       }
     }
 
     for (let r = write; r >= 0; r--) {
-      state[index(r, c)] = randomType();
+      state[index(r, c)] = randomType(gameState.typeCount);
     }
   }
 }
@@ -467,17 +431,12 @@ function dropAndRefillState(state) {
 function dropAndRefill() {
   const appearing = [];
   const falling = [];
-  const FALL_BASE_DELAY = 60;
-  const FALL_DELAY_PER_STEP = 55;
-  const FALL_MAX_DELAY = 240;
 
   for (let c = 0; c < SIZE; c++) {
     const values = [];
     for (let r = 0; r < SIZE; r++) {
       const i = index(r, c);
-      if (board[i] !== null) {
-        values.push({ row: r, value: board[i] });
-      }
+      if (gameState.board[i] !== null) values.push({ row: r, value: gameState.board[i] });
     }
 
     let write = SIZE - 1;
@@ -486,15 +445,13 @@ function dropAndRefill() {
       const from = info.row;
       const to = write;
       const target = index(to, c);
-
-      board[target] = info.value;
+      gameState.board[target] = info.value;
       if (target !== index(from, c)) {
-        const distance = to - from;
         falling.push({
           fromIndex: index(from, c),
           toIndex: target,
-          distance,
-          delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + distance * FALL_DELAY_PER_STEP),
+          distance: to - from,
+          delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + (to - from) * FALL_DELAY_PER_STEP),
         });
       }
       write--;
@@ -502,235 +459,453 @@ function dropAndRefill() {
 
     const spawnDistance = write + 1;
     for (let r = write; r >= 0; r--) {
-      board[index(r, c)] = randomType();
+      gameState.board[index(r, c)] = randomType();
       appearing.push(index(r, c));
-      const distance = spawnDistance;
       falling.push({
         fromIndex: index(r - spawnDistance, c),
         toIndex: index(r, c),
-        distance,
-        delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + distance * FALL_DELAY_PER_STEP),
+        distance: spawnDistance,
+        delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + spawnDistance * FALL_DELAY_PER_STEP),
       });
     }
   }
 
+  return { appearing: [...new Set(appearing)], falling };
+}
+
+function simulateSwapChain(from, to) {
+  if (!canSwap(from, to)) return null;
+
+  const state = [...gameState.board];
+  swapState(state, from, to);
+
+  let chain = 1;
+  const chainRemoved = [];
+  while (true) {
+    const matches = findMatchesOnBoard(state);
+    if (matches.length === 0) break;
+    chainRemoved.push(matches.length);
+    matches.forEach((i) => {
+      state[i] = null;
+    });
+    dropAndRefillState(state);
+    chain++;
+  }
+
+  if (chainRemoved.length === 0) return null;
+
+  const chainScores = chainRemoved.map((removedCount, index) => evaluateMatchScore(removedCount, index + 1));
+  const totalScore = chainScores.reduce((sum, value) => sum + value, 0);
   return {
-    appearing,
-    falling,
+    chains: chainRemoved.length,
+    totalScore,
+    chainScores,
   };
 }
 
-function swapState(state, i, j) {
-  const temp = state[i];
-  state[i] = state[j];
-  state[j] = temp;
+function getSwappableMatchHints(i) {
+  const hints = [];
+  const neighbors = getNeighbors(i);
+  for (const next of neighbors) {
+    const estimate = simulateSwapChain(i, next);
+    if (!estimate) continue;
+    hints.push({
+      index: next,
+      chains: estimate.chains,
+      totalScore: estimate.totalScore,
+    });
+  }
+  return hints;
 }
 
-async function executeSwap(from, to) {
-  if (locked || !canSwap(from, to)) return;
+function findGlobalHint() {
+  let best = null;
+  for (let i = 0; i < gameState.board.length; i++) {
+    const neighbors = getNeighbors(i);
+    for (const to of neighbors) {
+      if (to <= i) continue;
+      const estimate = simulateSwapChain(i, to);
+      if (!estimate) continue;
+      if (!best || estimate.totalScore > best.totalScore) {
+        best = {
+          from: i,
+          to,
+          chains: estimate.chains,
+          totalScore: estimate.totalScore,
+        };
+      }
+    }
+  }
+  return best;
+}
 
-  selected = null;
-  locked = true;
+function applyHint() {
+  if (gameState.levelResult !== "playing" || gameState.hintUsedThisLevel) return;
+  const hint = findGlobalHint();
+  if (!hint) {
+    setStatusLine(t("hint-empty"));
+    return;
+  }
+  gameState.hintUsedThisLevel = true;
+  uiState.activeHint = hint;
+  setStatusLine(t("hint-used"));
+  updateControls();
+  render();
+  setTimeout(() => {
+    if (uiState.activeHint === hint) {
+      uiState.activeHint = null;
+      if (!uiState.statusMessage) {
+        setStatusLine("");
+      }
+      render();
+    }
+  }, 5000);
+}
+
+async function settleBoard() {
+  let chain = 1;
+  let totalScore = 0;
+  let totalChains = 0;
+  while (true) {
+    const matches = findMatches();
+    if (matches.length === 0) break;
+
+    const gain = evaluateMatchScore(matches.length, chain);
+    totalScore += gain;
+    totalChains = chain;
+
+    const tiles = [...boardEl.children];
+    matches.forEach((i) => {
+      gameState.board[i] = null;
+      if (tiles[i]) tiles[i].classList.add("removing");
+    });
+
+    render();
+    await flashRemoved(140);
+    const { appearing, falling } = dropAndRefill();
+    render(appearing, falling);
+    await flashRemoved(720);
+
+    chain++;
+  }
+
+  if (totalScore > 0) {
+    gameState.goalProgress += totalScore;
+    gameState.score = gameState.goalProgress;
+    gameState.lastMoveScore = totalScore;
+    gameState.lastMoveChains = totalChains;
+    setStatusLine(t("move-result", {
+      score: totalScore,
+      chains: totalChains,
+      plural: totalChains > 1 ? "s" : "",
+    }));
+    gameState.chainCount = Math.max(gameState.chainCount, totalChains);
+  }
+
+  animateScorePop();
+  return { totalScore, totalChains };
+}
+
+function updateAchievements() {
+  if (gameState.lastMoveChains >= 3) {
+    achievementState.first3Chain = true;
+  }
+
+  if (gameState.lastMoveChains > achievementState.bestChain) {
+    achievementState.bestChain = gameState.lastMoveChains;
+  }
+
+  if (!achievementState.noInvalidIn20 && gameState.validMovesInLevel >= 20 && gameState.invalidMovesInLevel === 0) {
+    achievementState.noInvalidIn20 = true;
+  }
+
+  saveStateJson(STORAGE_KEYS.achievements, achievementState);
+}
+
+function renderAchievements() {
+  if (!achievementList) return;
+  const items = [
+    `<li>${t("achievement-first-3-chain")} ${achievementState.first3Chain ? "[done]" : "[ ]"}</li>`,
+    `<li>${t("achievement-best-chain", { count: Math.max(achievementState.bestChain, 0) })} ${achievementState.bestChain >= 1 ? "[done]" : "[ ]"}</li>`,
+    `<li>${t("achievement-no-invalid-20")} ${achievementState.noInvalidIn20 ? "[done]" : "[ ]"}</li>`,
+  ];
+  achievementList.innerHTML = items.join("");
+}
+
+function updateControls() {
+  nextLevelBtn.hidden = gameState.levelResult !== "won";
+  hintBtn.disabled = gameState.levelResult !== "playing" || gameState.hintUsedThisLevel;
+}
+
+function render(appearingIndexes = [], fallingTiles = []) {
+  boardEl.innerHTML = "";
+  const appearing = new Set(appearingIndexes);
+  const fallingMap = new Map(fallingTiles.map((tile) => [tile.toIndex, tile]));
+  const swapHints = uiState.selected !== null ? getSwappableMatchHints(uiState.selected) : [];
+  const swapHintMap = new Map(swapHints.map((hint) => [hint.index, hint]));
+
+  const neighborSet = uiState.selected !== null ? new Set(getNeighbors(uiState.selected)) : new Set();
+  for (let i = 0; i < gameState.board.length; i++) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = `tile type-${gameState.board[i]}`;
+    tile.dataset.index = String(i);
+    tile.setAttribute("aria-label", `${t("cell-label")} ${i + 1}`);
+    tile.textContent = SYMBOLS[gameState.board[i]] || "?";
+    if (appearing.has(i)) {
+      tile.classList.add("appearing");
+      tile.addEventListener("animationend", () => tile.classList.remove("appearing"), { once: true });
+    }
+
+    if (fallingMap.has(i)) {
+      const { distance, delay } = fallingMap.get(i);
+      if (distance > 0) {
+        tile.style.setProperty("--drop-distance", distance);
+        tile.style.setProperty("--fall-delay", `${delay || 0}ms`);
+        tile.classList.add("falling");
+        tile.addEventListener("animationend", () => tile.classList.remove("falling"), { once: true });
+      }
+    }
+
+    tile.addEventListener("click", () => {
+      if (uiState.suppressNextClick) {
+        uiState.suppressNextClick = false;
+        return;
+      }
+      void handleCellClick(i);
+    });
+    tile.addEventListener("pointerdown", (event) => handleTilePointerDown(i, event));
+    tile.addEventListener("pointerup", (event) => handleTilePointerUp(i, event));
+    tile.addEventListener("pointercancel", clearPointerState);
+    boardEl.appendChild(tile);
+  }
+
+  if (uiState.selected !== null && boardEl.children[uiState.selected]) {
+    const selectedTile = boardEl.children[uiState.selected];
+    selectedTile.classList.add("selected");
+    selectedTile.setAttribute("aria-label", `${t("cell-label")} ${uiState.selected + 1} (${t("aria-selected")})`);
+    for (const index of neighborSet) {
+      const tile = boardEl.children[index];
+      if (tile) tile.classList.add("swap-hint");
+    }
+
+    for (const [i, hint] of swapHintMap.entries()) {
+      const tile = boardEl.children[i];
+      if (!tile) continue;
+      tile.classList.remove("swap-hint");
+      tile.classList.add("match-hint");
+      const badge = document.createElement("span");
+      badge.className = "chain-badge";
+      badge.textContent = hint.chains > 1 ? `+${hint.totalScore} x${hint.chains}` : `+${hint.totalScore}`;
+      tile.setAttribute("aria-label", `${t("cell-label")} ${i + 1} (preview ${t("chain-preview", { score: hint.totalScore, chains: hint.chains })})`);
+      tile.appendChild(badge);
+    }
+  }
+
+  if (!uiState.selected && uiState.activeHint) {
+    const fromTile = boardEl.children[uiState.activeHint.from];
+    const toTile = boardEl.children[uiState.activeHint.to];
+    if (fromTile) fromTile.classList.add("match-hint");
+    if (toTile) {
+      toTile.classList.add("match-hint");
+      const badge = document.createElement("span");
+      badge.className = "chain-badge";
+      badge.textContent = `+${uiState.activeHint.totalScore} x${uiState.activeHint.chains}`;
+      toTile.setAttribute("aria-label", `${t("cell-label")} ${uiState.activeHint.to + 1} (hint)`);
+      toTile.appendChild(badge);
+    }
+  }
+
+  levelEl.textContent = String(gameState.level);
+  movesLeftEl.textContent = String(gameState.movesLeft);
+  targetScoreEl.textContent = String(gameState.targetScore);
+  goalProgressEl.textContent = String(gameState.goalProgress);
+
+  updateControls();
+  updateStatus();
+  renderAchievements();
+}
+
+function getSwipeTarget(fromIndex, dx, dy) {
+  const r = rowOf(fromIndex);
+  const c = colOf(fromIndex);
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+
+  if (Math.max(ax, ay) < SWIPE_THRESHOLD) return null;
+
+  if (ax >= ay) {
+    if (dx > 0 && c < SIZE - 1) return index(r, c + 1);
+    if (dx < 0 && c > 0) return index(r, c - 1);
+    return null;
+  }
+
+  if (dy > 0 && r < SIZE - 1) return index(r + 1, c);
+  if (dy < 0 && r > 0) return index(r - 1, c);
+  return null;
+}
+
+function handleTilePointerDown(index, event) {
+  if (!canInteract()) return;
+  if (event.button !== 0 && event.button !== -1) return;
+  event.preventDefault();
+  uiState.pointerState = {
+    pointerId: event.pointerId,
+    index,
+    x: event.clientX,
+    y: event.clientY,
+  };
+  tileSetDragState(index, true);
+}
+
+function handleTilePointerUp(index, event) {
+  if (!uiState.pointerState || event.pointerId !== uiState.pointerState.pointerId) {
+    clearPointerState();
+    return;
+  }
+
+  tileSetDragState(uiState.pointerState.index, false);
+  const dx = event.clientX - uiState.pointerState.x;
+  const dy = event.clientY - uiState.pointerState.y;
+  const abs = Math.max(Math.abs(dx), Math.abs(dy));
+  const shouldSwipe = gameState.inputMode === "drag" ? abs >= SWIPE_THRESHOLD : abs >= TAP_THRESHOLD;
+  const target = shouldSwipe ? getSwipeTarget(uiState.pointerState.index, dx, dy) : null;
+
+  if (target !== null) {
+    uiState.suppressNextClick = true;
+    void applyMove(uiState.pointerState.index, target);
+    clearPointerState();
+    return;
+  }
+
+  if (uiState.pointerState.index === index) {
+    uiState.suppressNextClick = true;
+    void handleCellClick(index);
+  }
+  clearPointerState();
+}
+
+function tileSetDragState(index, active) {
+  const tile = boardEl.children[index];
+  if (!tile) return;
+  tile.classList.toggle("dragging", active);
+}
+
+function clearPointerState() {
+  if (!uiState.pointerState) return;
+  tileSetDragState(uiState.pointerState.index, false);
+  uiState.pointerState = null;
+}
+
+function completeLevelResult(result) {
+  if (result === "won") {
+    gameState.levelResult = "won";
+    gameProgress.totalWins += 1;
+    if (gameProgress.highestUnlockedLevel < gameState.level + 1) {
+      gameProgress.highestUnlockedLevel = gameState.level + 1;
+    }
+    saveStateJson(STORAGE_KEYS.progress, gameProgress);
+    setGoalText(t("goal-success"));
+    setStatusLine("");
+  } else {
+    gameState.levelResult = "lost";
+    setGoalText(t("goal-fail"));
+    setStatusLine(t("status-no-match"));
+  }
+  updateControls();
+}
+
+async function applyMove(from, to) {
+  if (!canInteract() || !canSwap(from, to)) return;
+
+  uiState.selected = null;
+  uiState.activeHint = null;
+  gameState.locked = true;
+  setStatusLine("");
   await animateSwapTiles(from, to);
-  swap(from, to);
+  swapState(gameState.board, from, to);
   render();
 
   const matches = findMatches();
   if (matches.length === 0) {
     flashNoMatch(from);
     flashInvalidSwap(from, to);
+    await flashRemoved(160);
     await animateSwapTiles(from, to);
-    swap(from, to);
+    swapState(gameState.board, from, to);
     render();
-    statusEl.textContent = t("status-no-match");
-    await flashRemoved(500);
-    statusEl.textContent = "";
-    locked = false;
+    gameState.invalidMovesInLevel += 1;
+    setStatusLine(t("status-no-match"));
+    gameState.locked = false;
+    markTutorialAdvance();
     return;
   }
 
-  statusEl.textContent = "";
-  await settleBoard();
-  locked = false;
-}
+  if (!gameState.tutorial.completed) markTutorialAdvance();
 
-function hasMatchAt(i) {
-  const value = board[i];
-  if (value === null) return false;
+  gameState.movesLeft -= 1;
+  gameState.validMovesInLevel += 1;
 
-  const r = rowOf(i);
-  const c = colOf(i);
-
-  let count = 1;
-  for (let col = c - 1; col >= 0; col--) {
-    if (board[index(r, col)] === value) count++;
-    else break;
-  }
-  for (let col = c + 1; col < SIZE; col++) {
-    if (board[index(r, col)] === value) count++;
-    else break;
-  }
-  if (count >= 3) return true;
-
-  count = 1;
-  for (let row = r - 1; row >= 0; row--) {
-    if (board[index(row, c)] === value) count++;
-    else break;
-  }
-  for (let row = r + 1; row < SIZE; row++) {
-    if (board[index(row, c)] === value) count++;
-    else break;
-  }
-  return count >= 3;
-}
-
-function findMatches() {
-  const matches = new Set();
-
-  for (let r = 0; r < SIZE; r++) {
-    let start = 0;
-    while (start < SIZE) {
-      let end = start + 1;
-      while (end < SIZE && board[index(r, end)] === board[index(r, start)]) end++;
-      if (end - start >= 3) {
-        for (let c = start; c < end; c++) matches.add(index(r, c));
-      }
-      start = end;
-    }
-  }
-
-  for (let c = 0; c < SIZE; c++) {
-    let start = 0;
-    while (start < SIZE) {
-      let end = start + 1;
-      while (end < SIZE && board[index(end, c)] === board[index(start, c)]) end++;
-      if (end - start >= 3) {
-        for (let r = start; r < end; r++) matches.add(index(r, c));
-      }
-      start = end;
-    }
-  }
-
-  return [...matches];
-}
-
-function clearMatches() {
-  const matches = findMatches();
-  if (matches.length === 0) return false;
-
-  matches.forEach((i) => {
-    board[i] = null;
-  });
-
-  score += matches.length * 10;
-  scoreEl.textContent = String(score);
-  animateScorePop();
-
-  const tiles = [...boardEl.children];
-  matches.forEach((i) => {
-    if (tiles[i]) tiles[i].classList.add("removing");
-  });
-
-  return true;
-}
-
-function dropAndRefill() {
-  const appearing = [];
-  for (let c = 0; c < SIZE; c++) {
-    let write = SIZE - 1;
-    for (let r = SIZE - 1; r >= 0; r--) {
-      const i = index(r, c);
-      if (board[i] !== null) {
-        const target = index(write, c);
-        board[target] = board[i];
-        if (target !== i) board[i] = null;
-        write--;
-      }
-    }
-    for (let r = write; r >= 0; r--) {
-      const idx = index(r, c);
-      board[idx] = randomType();
-      appearing.push(idx);
-    }
-  }
-
-  return [...new Set(appearing)];
-}
-
-function swap(i, j) {
-  const temp = board[i];
-  board[i] = board[j];
-  board[j] = temp;
-}
-
-function canSwap(i, j) {
-  return getNeighbors(i).includes(j);
-}
-
-function hasInitialMatch() {
-  return findMatches().length > 0;
-}
-
-function fillBoardWithoutMatches() {
-  for (let i = 0; i < board.length; i++) {
-    board[i] = randomType();
-  }
-  while (hasInitialMatch()) {
-    for (let i = 0; i < board.length; i++) {
-      if (hasMatchAt(i)) board[i] = randomType();
-    }
-  }
-}
-
-function flashRemoved(ms = 120) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function settleBoard() {
-  while (true) {
-    const matches = findMatches();
-    if (matches.length === 0) break;
-
-    clearMatches();
+  const result = await settleBoard();
+  updateAchievements();
+  render();
+  if (isGoalReached()) {
+    completeLevelResult("won");
     render();
-    await flashRemoved(120);
-    const { appearing, falling } = dropAndRefill();
-    render(appearing, falling);
-    await flashRemoved(760);
+    gameState.locked = false;
+    return;
   }
+  if (isOutOfMoves()) {
+    completeLevelResult("lost");
+    render();
+    gameState.locked = false;
+    return;
+  }
+  gameState.locked = false;
+  updateStatus();
+}
+
+function setInputMode(mode) {
+  if (mode !== "drag" && mode !== "tap") mode = "drag";
+  gameState.inputMode = mode;
+  localStorage.setItem(STORAGE_KEYS.inputMode, mode);
+  inputModeSelect.value = mode;
 }
 
 async function handleCellClick(i) {
-  if (locked) return;
+  if (!canInteract()) return;
 
-  if (selected === null) {
-    selected = i;
+  if (uiState.selected === null) {
+    uiState.selected = i;
     render();
     return;
   }
 
-  if (selected === i) {
-    selected = null;
+  if (uiState.selected === i) {
+    uiState.selected = null;
     render();
     return;
   }
 
-  if (!canSwap(selected, i)) {
-    selected = i;
+  if (!canSwap(uiState.selected, i)) {
+    uiState.selected = i;
     render();
     return;
   }
 
-  await executeSwap(selected, i);
+  await applyMove(uiState.selected, i);
+}
+
+function goMainMenu() {
+  startLevel(1);
+}
+
+function playNextLevel() {
+  startLevel(gameState.level + 1);
 }
 
 function restart() {
-  score = 0;
-  statusEl.textContent = "";
-  scoreEl.textContent = "0";
-  selected = null;
-  fillBoardWithoutMatches();
-  render();
+  startLevel(gameState.level);
 }
 
 localeSelect.addEventListener("change", (event) => {
@@ -741,7 +916,23 @@ restartBtn.addEventListener("click", () => {
   restart();
 });
 
-fillBoardWithoutMatches();
-render();
+nextLevelBtn.addEventListener("click", () => {
+  playNextLevel();
+});
+
+mainMenuBtn.addEventListener("click", () => {
+  goMainMenu();
+});
+
+hintBtn.addEventListener("click", () => {
+  applyHint();
+});
+
+inputModeSelect.addEventListener("change", (event) => {
+  setInputMode(event.target.value);
+});
+
+Match3UI.setAriaLiveRegions();
+
+startLevel(gameProgress.currentLevel || 1);
 setLocale(currentLocale);
-settleBoard();
