@@ -32,6 +32,32 @@ const {
   boardAria,
 } = Match3UI;
 
+const {
+  index: logicIndex,
+  rowOf: logicRowOf,
+  colOf: logicColOf,
+  randomType: logicRandomType,
+  getNeighbors: logicGetNeighbors,
+  canSwap: logicCanSwap,
+  canInteract: logicCanInteract,
+  swapState: logicSwapState,
+  hasMatchAt: logicHasMatchAt,
+  findMatchesOnBoard: logicFindMatchesOnBoard,
+  findMatches: logicFindMatches,
+  hasMatches: logicHasMatches,
+  fillBoardWithoutMatches: logicFillBoardWithoutMatches,
+  dropAndRefillState: logicDropAndRefillState,
+  dropAndRefill: logicDropAndRefill,
+  simulateSwapChain: logicSimulateSwapChain,
+  getSwappableMatchHints: logicGetSwappableMatchHints,
+  findGlobalHint: logicFindGlobalHint,
+  getSwipeTarget: logicGetSwipeTarget,
+  getChainMultiplier: logicGetChainMultiplier,
+  evaluateMatchScore: logicEvaluateMatchScore,
+  isGoalReached: logicIsGoalReached,
+  isOutOfMoves: logicIsOutOfMoves,
+} = Match3Logic;
+
 let currentLocale = resolveLocale();
 
 gameState.tutorial = {
@@ -44,21 +70,13 @@ if (gameState.tutorial.stage < 1 || gameState.tutorial.stage > 2) {
   gameState.tutorial.stage = 1;
 }
 
-function getChainMultiplier(chainIndex) {
-  return chainIndex >= 4 ? 4 : chainIndex;
-}
+const getChainMultiplier = (chainIndex) => logicGetChainMultiplier(chainIndex);
 
-function evaluateMatchScore(matches, chainIndex) {
-  return matches * 10 * getChainMultiplier(chainIndex);
-}
+const evaluateMatchScore = (matches, chainIndex) => logicEvaluateMatchScore(matches, chainIndex);
 
-function isGoalReached() {
-  return gameState.goalProgress >= gameState.targetScore;
-}
+const isGoalReached = () => logicIsGoalReached(gameState);
 
-function isOutOfMoves() {
-  return gameState.movesLeft <= 0;
-}
+const isOutOfMoves = () => logicIsOutOfMoves(gameState);
 
 function setLocale(locale) {
   if (!SUPPORTED_LOCALES.includes(locale)) locale = "en";
@@ -204,340 +222,49 @@ function markTutorialAdvance() {
   saveTutorialState();
 }
 
-function index(row, col) {
-  return row * SIZE + col;
-}
+const index = (row, col) => logicIndex(row, col);
 
-function rowOf(i) {
-  return Math.floor(i / SIZE);
-}
+const rowOf = (i) => logicRowOf(i);
 
-function colOf(i) {
-  return i % SIZE;
-}
+const colOf = (i) => logicColOf(i);
 
-function randomType(typeCount = gameState.typeCount) {
-  return Math.floor(Math.random() * typeCount);
-}
+const randomType = (typeCount = gameState.typeCount) => logicRandomType(typeCount);
 
-function getNeighbors(i) {
-  const r = rowOf(i);
-  const c = colOf(i);
-  const out = [];
-  if (r > 0) out.push(index(r - 1, c));
-  if (r < SIZE - 1) out.push(index(r + 1, c));
-  if (c > 0) out.push(index(r, c - 1));
-  if (c < SIZE - 1) out.push(index(r, c + 1));
-  return out;
-}
+const getNeighbors = (i) => logicGetNeighbors(i);
 
-function canSwap(i, j) {
-  return getNeighbors(i).includes(j);
-}
+const canSwap = (i, j) => logicCanSwap(i, j);
 
-function canInteract() {
-  return gameState.levelResult === "playing" && !gameState.locked;
-}
+const canInteract = () => logicCanInteract(gameState);
 
-function swapState(state, i, j) {
-  const temp = state[i];
-  state[i] = state[j];
-  state[j] = temp;
-}
+const swapState = (state, i, j) => logicSwapState(state, i, j);
 
-function hasMatchAt(i, state) {
-  const value = state[i];
-  if (value === null) return false;
+const hasMatchAt = (i, state) => logicHasMatchAt(i, state);
 
-  const r = rowOf(i);
-  const c = colOf(i);
+const findMatchesOnBoard = (state) => logicFindMatchesOnBoard(state);
 
-  let count = 1;
-  for (let col = c - 1; col >= 0; col--) {
-    if (state[index(r, col)] === value) count++;
-    else break;
-  }
-  for (let col = c + 1; col < SIZE; col++) {
-    if (state[index(r, col)] === value) count++;
-    else break;
-  }
-  if (count >= 3) return true;
+const findMatches = () => logicFindMatches(gameState.board);
 
-  count = 1;
-  for (let row = r - 1; row >= 0; row--) {
-    if (state[index(row, c)] === value) count++;
-    else break;
-  }
-  for (let row = r + 1; row < SIZE; row++) {
-    if (state[index(row, c)] === value) count++;
-    else break;
-  }
-  return count >= 3;
-}
+const hasMatches = (state) => logicHasMatches(state);
 
-function findMatchesOnBoard(state) {
-  const matches = new Set();
+const fillBoardWithoutMatches = () => logicFillBoardWithoutMatches(gameState.board, gameState.typeCount);
 
-  for (let r = 0; r < SIZE; r++) {
-    let start = 0;
-    while (start < SIZE) {
-      let end = start + 1;
-      while (end < SIZE && state[index(r, end)] === state[index(r, start)]) end++;
-      if (end - start >= 3) {
-        for (let c = start; c < end; c++) matches.add(index(r, c));
-      }
-      start = end;
-    }
-  }
+const flashRemoved = (ms = 120) => Match3Animations.flashRemoved(ms);
 
-  for (let c = 0; c < SIZE; c++) {
-    let start = 0;
-    while (start < SIZE) {
-      let end = start + 1;
-      while (end < SIZE && state[index(end, c)] === state[index(start, c)]) end++;
-      if (end - start >= 3) {
-        for (let r = start; r < end; r++) matches.add(index(r, c));
-      }
-      start = end;
-    }
-  }
+const animateSwapTiles = (from, to) => Match3Animations.animateSwapTiles(boardEl, from, to);
 
-  return [...matches];
-}
+const flashNoMatch = (i) => Match3Animations.flashNoMatch(boardEl, i);
 
-function findMatches() {
-  return findMatchesOnBoard(gameState.board);
-}
+const flashInvalidSwap = (from, to) => Match3Animations.flashInvalidSwap(boardEl, from, to);
 
-function hasMatches(state) {
-  return findMatchesOnBoard(state).length > 0;
-}
+const dropAndRefillState = (state) => logicDropAndRefillState(state);
 
-function fillBoardWithoutMatches() {
-  for (let i = 0; i < gameState.board.length; i++) {
-    gameState.board[i] = randomType();
-  }
+const dropAndRefill = () => logicDropAndRefill(gameState.board, gameState.typeCount);
 
-  let attempts = 0;
-  while (hasMatches(gameState.board) && attempts < 150) {
-    for (let i = 0; i < gameState.board.length; i++) {
-      if (hasMatchAt(i, gameState.board)) {
-        gameState.board[i] = randomType();
-      }
-    }
-    attempts++;
-  }
-}
+const simulateSwapChain = (from, to) => logicSimulateSwapChain(gameState.board, from, to, gameState.typeCount);
 
-function flashRemoved(ms = 120) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const getSwappableMatchHints = (i) => logicGetSwappableMatchHints(gameState.board, i);
 
-function animateSwapTiles(from, to) {
-  const fromEl = boardEl.children[from];
-  const toEl = boardEl.children[to];
-  if (!fromEl || !toEl) return Promise.resolve();
-
-  const fromRect = fromEl.getBoundingClientRect();
-  const toRect = toEl.getBoundingClientRect();
-  const dx = toRect.left - fromRect.left;
-  const dy = toRect.top - fromRect.top;
-
-  const end = new Promise((resolve) => {
-    let done = false;
-
-    const onTransitionEnd = (event) => {
-      if (event.target !== fromEl && event.target !== toEl) return;
-      if (event.propertyName !== "transform") return;
-      if (done) return;
-      done = true;
-      cleanup();
-      resolve();
-    };
-
-    const cleanup = () => {
-      fromEl.classList.remove("swapping");
-      toEl.classList.remove("swapping");
-      fromEl.style.transform = "";
-      toEl.style.transform = "";
-      fromEl.removeEventListener("transitionend", onTransitionEnd);
-      toEl.removeEventListener("transitionend", onTransitionEnd);
-    };
-
-    fromEl.classList.add("swapping");
-    toEl.classList.add("swapping");
-    fromEl.style.transform = `translate(${dx}px, ${dy}px)`;
-    toEl.style.transform = `translate(${-dx}px, ${-dy}px)`;
-    requestAnimationFrame(() => {
-      fromEl.style.transform = "";
-      toEl.style.transform = "";
-    });
-
-    fromEl.addEventListener("transitionend", onTransitionEnd);
-    toEl.addEventListener("transitionend", onTransitionEnd);
-    setTimeout(() => {
-      if (!done) {
-        done = true;
-        cleanup();
-        resolve();
-      }
-    }, 240);
-  });
-
-  return end;
-}
-
-function flashNoMatch(i) {
-  const tile = boardEl.children[i];
-  if (!tile) return;
-  tile.classList.add("shake");
-  tile.addEventListener("animationend", () => tile.classList.remove("shake"), { once: true });
-}
-
-function flashInvalidSwap(from, to) {
-  const a = boardEl.children[from];
-  const b = boardEl.children[to];
-
-  if (a) {
-    a.classList.add("invalid-swap");
-    a.addEventListener("animationend", () => a.classList.remove("invalid-swap"), { once: true });
-  }
-  if (b) {
-    b.classList.add("invalid-swap");
-    b.addEventListener("animationend", () => b.classList.remove("invalid-swap"), { once: true });
-  }
-}
-
-function dropAndRefillState(state) {
-  for (let c = 0; c < SIZE; c++) {
-    let write = SIZE - 1;
-
-    for (let r = SIZE - 1; r >= 0; r--) {
-      const source = index(r, c);
-      if (state[source] !== null) {
-        const target = index(write, c);
-        state[target] = state[source];
-        if (target !== source) state[source] = null;
-        write--;
-      }
-    }
-
-    for (let r = write; r >= 0; r--) {
-      state[index(r, c)] = randomType(gameState.typeCount);
-    }
-  }
-}
-
-function dropAndRefill() {
-  const appearing = [];
-  const falling = [];
-
-  for (let c = 0; c < SIZE; c++) {
-    const values = [];
-    for (let r = 0; r < SIZE; r++) {
-      const i = index(r, c);
-      if (gameState.board[i] !== null) values.push({ row: r, value: gameState.board[i] });
-    }
-
-    let write = SIZE - 1;
-    for (let i = values.length - 1; i >= 0; i--) {
-      const info = values[i];
-      const from = info.row;
-      const to = write;
-      const target = index(to, c);
-      gameState.board[target] = info.value;
-      if (target !== index(from, c)) {
-        falling.push({
-          fromIndex: index(from, c),
-          toIndex: target,
-          distance: to - from,
-          delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + (to - from) * FALL_DELAY_PER_STEP),
-        });
-      }
-      write--;
-    }
-
-    const spawnDistance = write + 1;
-    for (let r = write; r >= 0; r--) {
-      gameState.board[index(r, c)] = randomType();
-      appearing.push(index(r, c));
-      falling.push({
-        fromIndex: index(r - spawnDistance, c),
-        toIndex: index(r, c),
-        distance: spawnDistance,
-        delay: Math.min(FALL_MAX_DELAY, FALL_BASE_DELAY + spawnDistance * FALL_DELAY_PER_STEP),
-      });
-    }
-  }
-
-  return { appearing: [...new Set(appearing)], falling };
-}
-
-function simulateSwapChain(from, to) {
-  if (!canSwap(from, to)) return null;
-
-  const state = [...gameState.board];
-  swapState(state, from, to);
-
-  let chain = 1;
-  const chainRemoved = [];
-  while (true) {
-    const matches = findMatchesOnBoard(state);
-    if (matches.length === 0) break;
-    chainRemoved.push(matches.length);
-    matches.forEach((i) => {
-      state[i] = null;
-    });
-    dropAndRefillState(state);
-    chain++;
-  }
-
-  if (chainRemoved.length === 0) return null;
-
-  const chainScores = chainRemoved.map((removedCount, index) => evaluateMatchScore(removedCount, index + 1));
-  const totalScore = chainScores.reduce((sum, value) => sum + value, 0);
-  return {
-    chains: chainRemoved.length,
-    totalScore,
-    chainScores,
-  };
-}
-
-function getSwappableMatchHints(i) {
-  const hints = [];
-  const neighbors = getNeighbors(i);
-  for (const next of neighbors) {
-    const estimate = simulateSwapChain(i, next);
-    if (!estimate) continue;
-    hints.push({
-      index: next,
-      chains: estimate.chains,
-      totalScore: estimate.totalScore,
-    });
-  }
-  return hints;
-}
-
-function findGlobalHint() {
-  let best = null;
-  for (let i = 0; i < gameState.board.length; i++) {
-    const neighbors = getNeighbors(i);
-    for (const to of neighbors) {
-      if (to <= i) continue;
-      const estimate = simulateSwapChain(i, to);
-      if (!estimate) continue;
-      if (!best || estimate.totalScore > best.totalScore) {
-        best = {
-          from: i,
-          to,
-          chains: estimate.chains,
-          totalScore: estimate.totalScore,
-        };
-      }
-    }
-  }
-  return best;
-}
+const findGlobalHint = () => logicFindGlobalHint(gameState.board, gameState.typeCount);
 
 function applyHint() {
   if (gameState.levelResult !== "playing" || gameState.hintUsedThisLevel) return;
@@ -726,24 +453,7 @@ function render(appearingIndexes = [], fallingTiles = []) {
   renderAchievements();
 }
 
-function getSwipeTarget(fromIndex, dx, dy) {
-  const r = rowOf(fromIndex);
-  const c = colOf(fromIndex);
-  const ax = Math.abs(dx);
-  const ay = Math.abs(dy);
-
-  if (Math.max(ax, ay) < SWIPE_THRESHOLD) return null;
-
-  if (ax >= ay) {
-    if (dx > 0 && c < SIZE - 1) return index(r, c + 1);
-    if (dx < 0 && c > 0) return index(r, c - 1);
-    return null;
-  }
-
-  if (dy > 0 && r < SIZE - 1) return index(r + 1, c);
-  if (dy < 0 && r > 0) return index(r - 1, c);
-  return null;
-}
+const getSwipeTarget = (fromIndex, dx, dy) => logicGetSwipeTarget(fromIndex, dx, dy);
 
 function handleTilePointerDown(index, event) {
   if (!canInteract()) return;
@@ -785,11 +495,7 @@ function handleTilePointerUp(index, event) {
   clearPointerState();
 }
 
-function tileSetDragState(index, active) {
-  const tile = boardEl.children[index];
-  if (!tile) return;
-  tile.classList.toggle("dragging", active);
-}
+const tileSetDragState = (index, active) => Match3Animations.setTileDragState(boardEl, index, active);
 
 function clearPointerState() {
   if (!uiState.pointerState) return;

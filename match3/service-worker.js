@@ -9,6 +9,8 @@ const ASSETS = [
   "./styles/board.css",
   "./styles/ui.css",
   "./js/modules/game-store.js",
+  "./js/modules/game-logic.js",
+  "./js/modules/game-animations.js",
   "./js/modules/game-ui.js",
   "./app.js",
   "./sw-register.js",
