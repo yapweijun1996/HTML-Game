@@ -3,6 +3,7 @@ const TYPES = 6;
 const SYMBOLS = ["◆", "◉", "▲", "★", "●", "✦"];
 const boardEl = document.getElementById("board");
 const scoreEl = document.getElementById("score");
+const scoreBox = document.getElementById("score-box");
 const statusEl = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
 const localeSelect = document.getElementById("locale");
@@ -13,12 +14,12 @@ const boardAria = document.querySelector("#board");
 const I18N = {
   en: {
     "title": "Match-3",
-    "subtitle": "Tap a tile, then tap an adjacent tile to swap. Any line of 3 or more matching tiles is removed.",
+    "subtitle": "Tap a tile, then tap an adjacent tile to swap. Keep chains alive for bigger multipliers.",
     "locale-label": "Language",
     "score-label": "Score",
-    "restart": "Restart",
-    "hint": "Offline support enabled; install to launch from your home screen.",
-    "status-no-match": "That swap does not create a match. Reverted.",
+    "restart": "New game",
+    "hint": "Tip: install to home screen for instant play, even offline.",
+    "status-no-match": "No chain formed. Try another move.",
     "cell-label": "Tile",
     "board-label": "Game board",
     "aria-selected": "Selected",
@@ -26,25 +27,25 @@ const I18N = {
   },
   zh: {
     "title": "三消",
-    "subtitle": "先点一个同色砖块，再点相邻砖块可交换。出现 3 个或以上连线将自动消除。",
+    "subtitle": "点击一个方块，再点击相邻方块交换；持续连消可获得更高倍率。",
     "locale-label": "语言",
     "score-label": "分数",
-    "restart": "重开",
-    "hint": "支持离线；安装后可直接从主屏启动。",
-    "status-no-match": "这次交换不产生消除，已回退。",
-    "cell-label": "格子",
+    "restart": "重新开始",
+    "hint": "小贴士：安装到主屏幕后可离线快速启动。",
+    "status-no-match": "本次未形成连消，请再试一次。",
+    "cell-label": "方块",
     "board-label": "游戏棋盘",
     "aria-selected": "已选中",
     "loading": "加载中"
   },
   ms: {
     "title": "Match-3",
-    "subtitle": "Ketik satu jubin, kemudian ketik jubin bersebelahan untuk bertukar. Sebarang barisan 3 atau lebih jubin yang sama akan hilang.",
+    "subtitle": "Ketik satu jubin, kemudian ketik yang bersebelahan untuk menukar. Pertahankan rantaian untuk bonus berulang.",
     "locale-label": "Bahasa",
     "score-label": "Markah",
-    "restart": "Mula Semula",
-    "hint": "Sokongan luar talian diaktifkan; pasang aplikasi untuk lancar dari skrin utama.",
-    "status-no-match": "Pertukaran itu tidak menghasilkan padanan. Dibatalkan.",
+    "restart": "Main Baru",
+    "hint": "Tip: pasang ke skrin utama untuk main terus, walaupun di luar talian.",
+    "status-no-match": "Tiada rantaian dibuat. Cuba langkah lain.",
     "cell-label": "Jubin",
     "board-label": "Papan permainan",
     "aria-selected": "Dipilih",
@@ -102,6 +103,13 @@ function setLocale(locale) {
   render();
 }
 
+function animateScorePop() {
+  if (!scoreBox) return;
+  scoreBox.classList.remove("score-pop");
+  void scoreBox.offsetWidth;
+  scoreBox.classList.add("score-pop");
+}
+
 const board = new Array(SIZE * SIZE);
 let selected = null;
 let locked = false;
@@ -134,8 +142,9 @@ function getNeighbors(i) {
   return out;
 }
 
-function render() {
+function render(appearingIndexes = []) {
   boardEl.innerHTML = "";
+  const appearing = new Set(appearingIndexes);
   board.forEach((value, i) => {
     const tile = document.createElement("button");
     tile.type = "button";
@@ -143,6 +152,10 @@ function render() {
     tile.dataset.index = String(i);
     tile.setAttribute("aria-label", `${t("cell-label")} ${i + 1}`);
     tile.textContent = SYMBOLS[value] || "⬤";
+    if (appearing.has(i)) {
+      tile.classList.add("appearing");
+      tile.addEventListener("animationend", () => tile.classList.remove("appearing"), { once: true });
+    }
     tile.addEventListener("click", () => handleCellClick(i));
     boardEl.appendChild(tile);
   });
@@ -284,6 +297,7 @@ function clearMatches() {
 
   score += matches.length * 10;
   scoreEl.textContent = String(score);
+  animateScorePop();
 
   const tiles = [...boardEl.children];
   matches.forEach((i) => {
@@ -294,6 +308,7 @@ function clearMatches() {
 }
 
 function dropAndRefill() {
+  const appearing = [];
   for (let c = 0; c < SIZE; c++) {
     let write = SIZE - 1;
     for (let r = SIZE - 1; r >= 0; r--) {
@@ -306,9 +321,13 @@ function dropAndRefill() {
       }
     }
     for (let r = write; r >= 0; r--) {
-      board[index(r, c)] = randomType();
+      const idx = index(r, c);
+      board[idx] = randomType();
+      appearing.push(idx);
     }
   }
+
+  return [...new Set(appearing)];
 }
 
 function swap(i, j) {
@@ -341,20 +360,16 @@ function flashRemoved(ms = 120) {
 }
 
 async function settleBoard() {
-  let has = true;
-  while (has) {
+  while (true) {
     const matches = findMatches();
-    if (matches.length === 0) {
-      has = false;
-      break;
-    }
+    if (matches.length === 0) break;
 
     clearMatches();
     render();
     await flashRemoved(120);
-    dropAndRefill();
-    render();
-    await flashRemoved(40);
+    const appearing = dropAndRefill();
+    render(appearing);
+    await flashRemoved(90);
   }
 }
 

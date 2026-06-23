@@ -17,11 +17,11 @@
         <div class="title-block">
           <p class="badge">Match-3</p>
           <h1 data-i18n="title">Match-3</h1>
-          <p data-i18n="subtitle">Tap a tile, then tap an adjacent tile to swap. Any line of 3 or more matching tiles is removed.</p>
+          <p data-i18n="subtitle">Tap a tile, then tap an adjacent tile to swap. Keep chains alive for bigger multipliers.</p>
         </div>
 
         <section class="hud" aria-label="Game status">
-          <div class="score-box">
+          <div class="score-box" id="score-box">
             <span data-i18n="score-label">Score</span>
             <strong id="score">0</strong>
           </div>
@@ -42,7 +42,7 @@
       </section>
 
       <div class="status-area" aria-live="polite">
-        <p class="hint" data-i18n="hint">Offline support enabled; install to launch from your home screen.</p>
+        <p class="hint" data-i18n="hint">Tip: install to home screen for instant play, even offline.</p>
         <p class="offline-status" id="status"></p>
       </div>
     </main>
