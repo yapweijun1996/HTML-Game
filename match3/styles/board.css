@@ -1,9 +1,50 @@
 .board-wrap {
+  position: relative;
   padding: var(--space-3);
   min-height: 0;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-soft);
   background: var(--color-surface-board);
+}
+
+.level-result-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: rgba(5, 14, 30, 0.88);
+  backdrop-filter: blur(6px);
+  animation: result-reveal 300ms var(--ease-bounce);
+}
+
+.level-result-overlay[hidden] {
+  display: none;
+}
+
+.result-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 6vw, 2.8rem);
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.result-title.is-win {
+  color: var(--color-success);
+  text-shadow: 0 0 28px rgba(52, 211, 153, 0.65);
+}
+
+.result-title.is-loss {
+  color: var(--color-warning);
+  text-shadow: 0 0 28px rgba(245, 158, 11, 0.55);
+}
+
+@keyframes result-reveal {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .board {

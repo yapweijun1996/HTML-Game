@@ -32,6 +32,9 @@ const {
   boardAria,
 } = Match3UI;
 
+const resultOverlayEl = document.getElementById("level-result-overlay");
+const resultTitleEl   = document.getElementById("result-title");
+
 const {
   startTurn: flowStartTurn,
   startLevel: flowStartLevel,
@@ -180,6 +183,7 @@ function animateScorePop() {
 
 function startTurn() {
   flowStartTurn(gameState, uiState);
+  hideResultOverlay();
 }
 
 const appEl = document.querySelector(".app");
@@ -230,6 +234,18 @@ function refreshBoardSize() {
 
     appEl.style.setProperty("--board-size-by-view", `${Math.floor(computedSize)}px`);
   });
+}
+
+function showResultOverlay(result) {
+  if (!resultOverlayEl || !resultTitleEl) return;
+  const isWin = result === "won";
+  resultTitleEl.textContent = isWin ? t("goal-success") : t("goal-fail");
+  resultTitleEl.className = `result-title ${isWin ? "is-win" : "is-loss"}`;
+  resultOverlayEl.removeAttribute("hidden");
+}
+
+function hideResultOverlay() {
+  if (resultOverlayEl) resultOverlayEl.setAttribute("hidden", "");
 }
 
 function startLevel(level) {
@@ -542,6 +558,7 @@ function completeLevelResult(result) {
     setGoalText(t("goal-fail"));
     setStatusLine(t("status-no-match"));
   }
+  showResultOverlay(result);
   updateControls();
 }
 
@@ -552,47 +569,48 @@ async function applyMove(from, to) {
   uiState.activeHint = null;
   gameState.locked = true;
   setStatusLine("");
-  await animateSwapTiles(from, to);
-  swapState(gameState.board, from, to);
-  render();
 
-  const matches = findMatches();
-  if (matches.length === 0) {
-    flashNoMatch(from);
-    flashInvalidSwap(from, to);
-    await flashRemoved(160);
+  try {
     await animateSwapTiles(from, to);
     swapState(gameState.board, from, to);
     render();
-    gameState.invalidMovesInLevel += 1;
-    setStatusLine(t("status-no-match"));
-    gameState.locked = false;
-    markTutorialAdvance();
-    return;
-  }
 
-  if (!gameState.tutorial.completed) markTutorialAdvance();
+    const matches = findMatches();
+    if (matches.length === 0) {
+      flashNoMatch(from);
+      flashInvalidSwap(from, to);
+      await flashRemoved(160);
+      await animateSwapTiles(from, to);
+      swapState(gameState.board, from, to);
+      render();
+      gameState.invalidMovesInLevel += 1;
+      setStatusLine(t("status-no-match"));
+      markTutorialAdvance();
+      return;
+    }
 
-  gameState.movesLeft -= 1;
-  gameState.validMovesInLevel += 1;
+    if (!gameState.tutorial.completed) markTutorialAdvance();
 
-  const result = await settleBoard();
-  updateAchievements();
-  render();
-  if (isGoalReached()) {
-    completeLevelResult("won");
+    gameState.movesLeft -= 1;
+    gameState.validMovesInLevel += 1;
+
+    const result = await settleBoard();
+    updateAchievements();
     render();
+    if (isGoalReached()) {
+      completeLevelResult("won");
+      render();
+      return;
+    }
+    if (isOutOfMoves()) {
+      completeLevelResult("lost");
+      render();
+      return;
+    }
+    updateStatus();
+  } finally {
     gameState.locked = false;
-    return;
   }
-  if (isOutOfMoves()) {
-    completeLevelResult("lost");
-    render();
-    gameState.locked = false;
-    return;
-  }
-  gameState.locked = false;
-  updateStatus();
 }
 
 function setInputMode(mode) {
