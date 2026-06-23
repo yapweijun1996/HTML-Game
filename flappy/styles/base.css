@@ -1,0 +1,205 @@
+:root {
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  line-height: 1.35;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  display: grid;
+  place-items: start center;
+  min-height: 100dvh;
+  min-height: 100vh;
+  overflow: hidden auto;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.18), transparent 34%),
+    radial-gradient(circle at 85% 0%, rgba(167, 139, 250, 0.2), transparent 38%),
+    radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.16), transparent 42%),
+    linear-gradient(160deg, #070b17 0%, #0b1430 50%, #0a1022 100%);
+  color: var(--color-text);
+  padding:
+    max(var(--space-3), var(--safe-top))
+    max(var(--space-3), var(--safe-right))
+    max(var(--space-3), var(--safe-bottom))
+    max(var(--space-3), var(--safe-left));
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── App shell: 3-zone grid ── */
+.app {
+  width: min(960px, calc(100vw - 2 * var(--space-4)));
+  max-width: 100%;
+  border-radius: var(--radius-xl);
+  display: grid;
+  grid-template-areas:
+    "hud"
+    "game"
+    "status";
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: linear-gradient(180deg, rgba(17, 25, 47, 0.92), rgba(9, 15, 31, 0.88));
+  border: 1px solid var(--color-border-soft);
+  box-shadow: 0 20px 44px var(--color-shadow);
+  overflow: hidden auto;
+  align-content: start;
+  min-height: min(100dvh, 100vh);
+}
+
+.hud-zone    { grid-area: hud; }
+.game-wrap   { grid-area: game; }
+.status-area { grid-area: status; }
+
+/* ── Desktop sidebar (>=1024px) ── */
+@media (min-width: 1024px) {
+  body {
+    padding:
+      max(var(--space-4), var(--safe-top))
+      max(var(--space-4), var(--safe-right))
+      max(var(--space-4), var(--safe-bottom))
+      max(var(--space-4), var(--safe-left));
+  }
+
+  .app {
+    grid-template-areas:
+      "game hud"
+      "game status";
+    grid-template-columns: 1fr 280px;
+    grid-template-rows: 1fr auto;
+    gap: var(--space-3);
+    height: min(100dvh, 100vh);
+    max-height: min(100dvh, 100vh);
+    min-height: unset;
+    overflow: hidden;
+    align-content: stretch;
+  }
+
+  .game-wrap {
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    height: 100%;
+  }
+
+  #game-canvas {
+    margin: auto;
+  }
+
+  .hud-zone {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .status-area {
+    overflow-y: auto;
+    max-height: 200px;
+  }
+}
+
+h1 {
+  font-family: var(--font-heading);
+  margin: 0 0 var(--space-2);
+  font-size: clamp(1.5rem, 4vw, 1.95rem);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+select,
+button {
+  font: inherit;
+}
+
+p,
+li,
+label,
+button,
+select {
+  color: inherit;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-info) 65%, transparent);
+  outline-offset: 2px;
+}
+
+/* ── Mobile body padding ── */
+@media (max-width: 900px) {
+  body {
+    padding:
+      max(0px, var(--safe-top))
+      max(0px, var(--safe-right))
+      max(0px, var(--safe-bottom))
+      max(0px, var(--safe-left));
+  }
+
+  .app {
+    width: min(100vw, 100%);
+    border-radius: 0;
+    border: none;
+    padding: var(--space-3) var(--space-2) var(--space-2);
+    box-shadow: none;
+    gap: var(--space-2);
+  }
+}
+
+/* ── Compact adjustments for short viewports ── */
+@media (max-height: 700px) and (max-width: 1023px) {
+  .hud {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .score-box {
+    min-height: 44px;
+    padding: 5px 8px;
+  }
+
+  .score-box span {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  .score-box strong {
+    font-size: 1.15rem;
+  }
+
+  button,
+  select,
+  .hud select {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+
+  .status-area {
+    padding: 6px 10px 8px;
+    min-height: 44px;
+    gap: 4px;
+  }
+
+  .hint,
+  .status-message {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+}

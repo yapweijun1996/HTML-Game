@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#080f22"/>
+  <!-- Body (amber ellipse) -->
+  <ellipse cx="256" cy="268" rx="112" ry="98" fill="#fbbf24"/>
+  <!-- Wing -->
+  <ellipse cx="218" cy="304" rx="70" ry="34" fill="#f59e0b"/>
+  <!-- Belly (lighter front) -->
+  <ellipse cx="278" cy="288" rx="48" ry="54" fill="#fde68a"/>
+  <!-- Beak (orange triangle) -->
+  <polygon points="348,256 404,268 348,293" fill="#f97316"/>
+  <!-- Eye white -->
+  <circle cx="310" cy="228" r="37" fill="#ffffff"/>
+  <!-- Pupil -->
+  <circle cx="323" cy="237" r="18" fill="#1e293b"/>
+  <!-- Shine -->
+  <circle cx="332" cy="226" r="8" fill="#ffffff"/>
+</svg>
