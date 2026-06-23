@@ -22,8 +22,10 @@
         <div class="title-block">
           <p class="badge">Match-3</p>
           <h1 data-i18n="title">Match-3</h1>
-          <p data-i18n="subtitle">Tap a tile, then tap an adjacent tile to swap. Keep chains alive for bigger multipliers.</p>
-          <p data-i18n="subtitle-goal">Goal: reach the target score before moves run out.</p>
+          <div class="title-copy">
+            <p class="subtitle" data-i18n="subtitle">Tap a tile, then tap an adjacent tile to swap. Drag mode works for touch too.</p>
+            <p class="subtitle" data-i18n="subtitle-goal">Goal: reach the target score before moves run out.</p>
+          </div>
         </div>
 
         <section class="hud" aria-label="Game status">
@@ -46,14 +48,14 @@
             </div>
           </div>
 
-          <div class="control-row">
-            <button id="restart" data-i18n="restart">Replay Level</button>
-            <button id="next-level" data-i18n="next-level" hidden>Next Level</button>
-            <button id="main-menu" data-i18n="main-menu">Main Menu</button>
+          <div class="control-row control-row--primary">
+            <button id="restart" class="btn btn-primary" data-i18n="restart">Replay Level</button>
+            <button id="next-level" class="btn btn-success" data-i18n="next-level" hidden>Next Level</button>
+            <button id="main-menu" class="btn btn-secondary" data-i18n="main-menu">Main Menu</button>
           </div>
 
-          <div class="control-row">
-            <button id="hint" data-i18n="hint-button">Hint</button>
+          <div class="control-row control-row--secondary">
+            <button id="hint" class="btn btn-ghost" data-i18n="hint-button">Hint</button>
             <label for="input-mode" class="mode-label" data-i18n="interaction-label">Input mode</label>
             <select id="input-mode">
               <option value="drag" data-i18n="input-mode-drag">Drag</option>
@@ -75,10 +77,14 @@
       </section>
 
       <div class="status-area">
-        <p class="hint" id="status-hint"></p>
-        <p class="hint" data-i18n="hint">Tip: install to home screen for instant play, even offline.</p>
-        <p class="status-message" id="status" aria-live="polite"></p>
-        <p class="goal-message" id="goal-message" aria-live="assertive"></p>
+        <div class="status-ticker">
+          <p class="hint status-hint" id="status-hint"></p>
+          <p class="hint status-note" data-i18n="hint">Tip: install to home screen for instant play, even offline.</p>
+        </div>
+        <div class="status-messages">
+          <p class="status-message" id="status" aria-live="polite"></p>
+          <p class="goal-message" id="goal-message" aria-live="assertive"></p>
+        </div>
         <div class="achievements-wrap">
           <p data-i18n="achievement-title">Achievements</p>
           <ul id="achievements" class="achievements-list"></ul>
@@ -98,5 +104,3 @@
     <script src="./sw-register.js" defer></script>
   </body>
 </html>
-
-

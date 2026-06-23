@@ -421,7 +421,7 @@ function render(appearingIndexes = [], fallingTiles = []) {
       toTile.classList.add("match-hint");
       const badge = document.createElement("span");
       badge.className = "chain-badge";
-      badge.textContent = `+${uiState.activeHint.totalScore} x${uiState.activeHint.chains}`;
+      badge.textContent = uiState.activeHint.chains > 1 ? `+${uiState.activeHint.totalScore} x${uiState.activeHint.chains}` : `+${uiState.activeHint.totalScore}`;
       toTile.setAttribute("aria-label", `${t("cell-label")} ${uiState.activeHint.to + 1} (hint)`);
       toTile.appendChild(badge);
     }
