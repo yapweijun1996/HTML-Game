@@ -7,7 +7,7 @@
     "interaction-label": "Input mode",
     "input-mode-drag": "Drag",
     "input-mode-tap": "Tap",
-    "level-label": "L",
+    "level-label": "Level",
     "moves-left": "Moves",
     "target-score": "Target",
     "goal-progress-label": "Score",
