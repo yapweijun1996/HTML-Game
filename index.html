@@ -49,14 +49,32 @@
         font-size: 13px;
         color: #64748b;
       }
+      .game-links {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .game-links a {
+        flex: 1 1 auto;
+        text-align: center;
+      }
+      .game-links a.secondary {
+        background: #7c3aed;
+      }
+      .game-links a.secondary:hover {
+        background: #6d28d9;
+      }
     </style>
   </head>
   <body>
     <main class="shell">
       <h1>HTML Game</h1>
-      <p>A tiny Match-3 game built as a PWA. Install it for an app-like experience.</p>
-      <a href="./match3/">Start Game</a>
-      <div class="small">Works on mobile and desktop; game assets are in <code>match3/</code>.</div>
+      <p>PWA games built with HTML/CSS/JS. Install any game for an app-like offline experience.</p>
+      <div class="game-links">
+        <a href="./match3/">Match-3</a>
+        <a href="./flappy/" class="secondary">Flappy Bird</a>
+      </div>
+      <div class="small">Works on mobile and desktop; game assets are in <code>match3/</code> and <code>flappy/</code>.</div>
     </main>
   </body>
 </html>

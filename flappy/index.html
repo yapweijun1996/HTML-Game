@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="Offline-ready Flappy Bird game built with HTML/CSS/JS (PWA)." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.svg" />
+    <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg" />
+    <title>Flappy Bird</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+
+      <!-- HUD ZONE -->
+      <div class="hud-zone">
+        <div class="title-block">
+          <p class="badge">Flappy Bird</p>
+          <h1 data-i18n="title">Flappy Bird</h1>
+          <div class="title-copy">
+            <p class="subtitle" data-i18n="subtitle">Tap or press Space to flap. Avoid the pipes!</p>
+          </div>
+        </div>
+
+        <section class="hud" aria-label="Game status">
+          <div class="stat-grid">
+            <div class="score-box">
+              <span data-i18n="score-label">Score</span>
+              <strong id="score-display">0</strong>
+            </div>
+            <div class="score-box">
+              <span data-i18n="best-label">Best</span>
+              <strong id="best-display">0</strong>
+            </div>
+          </div>
+
+          <div class="control-row control-row--primary">
+            <button id="restart-btn" class="btn btn-primary" data-i18n="play-again">Play Again</button>
+            <button id="menu-btn" class="btn btn-secondary" data-i18n="main-menu">Main Menu</button>
+          </div>
+
+          <div class="lang-pair">
+            <label for="locale" data-i18n="locale-label">Language</label>
+            <select id="locale">
+              <option value="en">English</option>
+              <option value="zh">&#20013;&#25991;</option>
+              <option value="ms">Bahasa Melayu</option>
+            </select>
+          </div>
+        </section>
+      </div>
+
+      <!-- GAME CANVAS AREA -->
+      <section class="game-wrap" id="game-wrap">
+        <!-- Start overlay -->
+        <div id="start-overlay" class="game-overlay" role="status">
+          <p class="overlay-title" data-i18n="tap-to-start">Tap to Start</p>
+          <p class="overlay-sub" data-i18n="subtitle">Tap or press Space to flap</p>
+        </div>
+        <!-- Dead overlay -->
+        <div id="dead-overlay" class="game-overlay" hidden role="status" aria-live="assertive">
+          <p class="overlay-title is-loss" data-i18n="game-over">Game Over</p>
+          <div class="overlay-scores">
+            <div>
+              <span data-i18n="score-label">Score</span>
+              <strong id="final-score">0</strong>
+            </div>
+            <div>
+              <span data-i18n="best-label">Best</span>
+              <strong id="final-best">0</strong>
+            </div>
+          </div>
+        </div>
+        <canvas id="game-canvas"></canvas>
+      </section>
+
+      <!-- STATUS -->
+      <div class="status-area">
+        <p class="hint" data-i18n="hint">Tip: install to home screen for instant play, even offline.</p>
+      </div>
+
+    </main>
+
+    <script src="./js/config.js" defer></script>
+    <script src="./js/i18n.js" defer></script>
+    <script src="./app.js" defer></script>
+    <script src="./sw-register.js" defer></script>
+  </body>
+</html>
