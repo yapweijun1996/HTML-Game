@@ -145,12 +145,15 @@ function getNeighbors(i) {
   return out;
 }
 
-function render(appearingIndexes = []) {
+function render(appearingIndexes = [], fallingTiles = []) {
   boardEl.innerHTML = "";
   const appearing = new Set(appearingIndexes);
   const swapHints = selected !== null ? getSwappableMatchHints(selected) : [];
   const swapHintMap = new Map(swapHints.map((hint) => [hint.index, hint]));
   const neighborSet = selected !== null ? new Set(getNeighbors(selected)) : new Set();
+  const fallingMap = new Map(
+    fallingTiles.map((info) => [info.toIndex, info.distance])
+  );
   board.forEach((value, i) => {
     const tile = document.createElement("button");
     tile.type = "button";
@@ -161,6 +164,15 @@ function render(appearingIndexes = []) {
     if (appearing.has(i)) {
       tile.classList.add("appearing");
       tile.addEventListener("animationend", () => tile.classList.remove("appearing"), { once: true });
+    }
+
+    if (fallingMap.has(i)) {
+      const distance = fallingMap.get(i);
+      if (distance > 0) {
+        tile.style.setProperty("--drop-distance", distance);
+        tile.classList.add("falling");
+        tile.addEventListener("animationend", () => tile.classList.remove("falling"), { once: true });
+      }
     }
     tile.addEventListener("click", () => {
       if (suppressNextClick) {
@@ -451,6 +463,55 @@ function dropAndRefillState(state) {
   }
 }
 
+function dropAndRefill() {
+  const appearing = [];
+  const falling = [];
+
+  for (let c = 0; c < SIZE; c++) {
+    const values = [];
+    for (let r = 0; r < SIZE; r++) {
+      const i = index(r, c);
+      if (board[i] !== null) {
+        values.push({ row: r, value: board[i] });
+      }
+    }
+
+    let write = SIZE - 1;
+    for (let i = values.length - 1; i >= 0; i--) {
+      const info = values[i];
+      const from = info.row;
+      const to = write;
+      const target = index(to, c);
+
+      board[target] = info.value;
+      if (target !== index(from, c)) {
+        falling.push({
+          fromIndex: index(from, c),
+          toIndex: target,
+          distance: to - from,
+        });
+      }
+      write--;
+    }
+
+    const spawnDistance = write + 1;
+    for (let r = write; r >= 0; r--) {
+      board[index(r, c)] = randomType();
+      appearing.push(index(r, c));
+      falling.push({
+        fromIndex: index(r - spawnDistance, c),
+        toIndex: index(r, c),
+        distance: spawnDistance,
+      });
+    }
+  }
+
+  return {
+    appearing,
+    falling,
+  };
+}
+
 function swapState(state, i, j) {
   const temp = state[i];
   state[i] = state[j];
@@ -625,8 +686,8 @@ async function settleBoard() {
     clearMatches();
     render();
     await flashRemoved(120);
-    const appearing = dropAndRefill();
-    render(appearing);
+    const { appearing, falling } = dropAndRefill();
+    render(appearing, falling);
     await flashRemoved(90);
   }
 }

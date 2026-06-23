@@ -3,6 +3,7 @@
   color: #dce5ff;
   background: #070b17;
   line-height: 1.35;
+  --tile-gap: 5px;
   --safe-top: env(safe-area-inset-top);
   --safe-right: env(safe-area-inset-right);
   --safe-bottom: env(safe-area-inset-bottom);
@@ -200,7 +201,7 @@ select:focus-visible {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  gap: 5px;
+  gap: var(--tile-gap);
   touch-action: none;
 }
 
@@ -311,6 +312,11 @@ select:focus-visible {
   animation: tile-pop 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.tile.falling {
+  transform: translateY(calc(-1 * var(--drop-distance) * (100% + var(--tile-gap))));
+  animation: tile-fall 190ms cubic-bezier(0.17, 0.89, 0.32, 1.2);
+}
+
 .score-pop {
   animation: score-pop 280ms cubic-bezier(0.18, 1, 0.31, 1);
 }
@@ -355,6 +361,15 @@ select:focus-visible {
   100% {
     transform: scale(1) translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes tile-fall {
+  0% {
+    transform: translateY(calc(-1 * var(--drop-distance) * (100% + var(--tile-gap))));
+  }
+  100% {
+    transform: translateY(0);
   }
 }
 
