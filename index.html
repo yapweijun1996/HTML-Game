@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HTML Game</title>
+    <style>
+      :root {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #2c2c2c;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+      }
+      .shell {
+        width: min(720px, calc(100vw - 32px));
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 32px;
+        box-sizing: border-box;
+        box-shadow: 0 14px 40px rgba(2, 6, 23, 0.25);
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 30px;
+      }
+      p {
+        margin: 0 0 22px;
+        color: #334155;
+        line-height: 1.5;
+      }
+      a {
+        display: inline-block;
+        text-decoration: none;
+        background: #2563eb;
+        color: #fff;
+        padding: 12px 18px;
+        border-radius: 8px;
+      }
+      a:hover {
+        background: #1d4ed8;
+      }
+      .small {
+        margin-top: 14px;
+        font-size: 13px;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <h1>HTML Game</h1>
+      <p>这是一个可安装的三消小游戏（PWA）。点击下方按钮即可进入游戏。</p>
+      <a href="./三消/">开始游戏</a>
+      <div class="small">支持手机与桌面，游戏文件位于 <code>三消/</code> 文件夹。</div>
+    </main>
+  </body>
+</html>
