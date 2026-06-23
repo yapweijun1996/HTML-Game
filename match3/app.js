@@ -4,6 +4,102 @@ const boardEl = document.getElementById("board");
 const scoreEl = document.getElementById("score");
 const statusEl = document.getElementById("status");
 const restartBtn = document.getElementById("restart");
+const localeSelect = document.getElementById("locale");
+const tNodes = document.querySelectorAll("[data-i18n]");
+const tAriaNodes = document.querySelectorAll("[data-i18n-aria]");
+const boardAria = document.querySelector("#board");
+
+const I18N = {
+  en: {
+    "title": "Match-3",
+    "subtitle": "Tap a tile, then tap an adjacent tile to swap. Any line of 3 or more matching tiles is removed.",
+    "locale-label": "Language",
+    "score-label": "Score",
+    "restart": "Restart",
+    "hint": "Offline support enabled; install to launch from your home screen.",
+    "status-no-match": "That swap does not create a match. Reverted.",
+    "cell-label": "Tile",
+    "board-label": "Game board",
+    "aria-selected": "Selected",
+    "loading": "Loading"
+  },
+  zh: {
+    "title": "三消",
+    "subtitle": "先点一个同色砖块，再点相邻砖块可交换。出现 3 个或以上连线将自动消除。",
+    "locale-label": "语言",
+    "score-label": "分数",
+    "restart": "重开",
+    "hint": "支持离线；安装后可直接从主屏启动。",
+    "status-no-match": "这次交换不产生消除，已回退。",
+    "cell-label": "格子",
+    "board-label": "游戏棋盘",
+    "aria-selected": "已选中",
+    "loading": "加载中"
+  },
+  ms: {
+    "title": "Match-3",
+    "subtitle": "Ketik satu jubin, kemudian ketik jubin bersebelahan untuk bertukar. Sebarang barisan 3 atau lebih jubin yang sama akan hilang.",
+    "locale-label": "Bahasa",
+    "score-label": "Markah",
+    "restart": "Mula Semula",
+    "hint": "Sokongan luar talian diaktifkan; pasang aplikasi untuk lancar dari skrin utama.",
+    "status-no-match": "Pertukaran itu tidak menghasilkan padanan. Dibatalkan.",
+    "cell-label": "Jubin",
+    "board-label": "Papan permainan",
+    "aria-selected": "Dipilih",
+    "loading": "Memuatkan"
+  }
+};
+
+const SUPPORTED_LOCALES = Object.keys(I18N);
+
+function getBrowserLocale() {
+  const nav = (navigator.language || "en").toLowerCase();
+  if (nav.startsWith("zh")) return "zh";
+  if (nav.startsWith("ms") || nav.startsWith("id")) return "ms";
+  return "en";
+}
+
+function resolveLocale() {
+  const saved = localStorage.getItem("match3.locale");
+  if (saved && SUPPORTED_LOCALES.includes(saved)) return saved;
+  return getBrowserLocale();
+}
+
+function t(key) {
+  return I18N[currentLocale][key] || I18N.en[key] || key;
+}
+
+let currentLocale = resolveLocale();
+
+function applyLocaleText() {
+  tNodes.forEach((node) => {
+    const key = node.getAttribute("data-i18n");
+    if (key) node.textContent = t(key);
+  });
+
+  tAriaNodes.forEach((node) => {
+    const key = node.getAttribute("data-i18n-aria");
+    if (key) node.setAttribute("aria-label", t(key));
+  });
+
+  if (boardAria) boardAria.setAttribute("aria-label", t("board-label"));
+
+  localeSelect.value = currentLocale;
+  document.documentElement.lang = currentLocale === "zh" ? "zh-CN" : currentLocale === "ms" ? "ms-MY" : "en";
+
+  if (selected !== null && boardEl.children[selected]) {
+    boardEl.children[selected].setAttribute("aria-label", `${t("cell-label")} ${selected + 1} (${t("aria-selected")})`);
+  }
+}
+
+function setLocale(locale) {
+  if (!SUPPORTED_LOCALES.includes(locale)) locale = "en";
+  currentLocale = locale;
+  localStorage.setItem("match3.locale", locale);
+  applyLocaleText();
+  render();
+}
 
 const board = new Array(SIZE * SIZE);
 let selected = null;
@@ -44,13 +140,14 @@ function render() {
     tile.type = "button";
     tile.className = `tile type-${value}`;
     tile.dataset.index = String(i);
-    tile.setAttribute("aria-label", `格子 ${i + 1}`);
+    tile.setAttribute("aria-label", `${t("cell-label")} ${i + 1}`);
     tile.textContent = "⬤";
     tile.addEventListener("click", () => handleCellClick(i));
     boardEl.appendChild(tile);
   });
 
   if (selected !== null && boardEl.children[selected]) {
+    boardEl.children[selected].setAttribute("aria-label", `${t("cell-label")} ${selected + 1} (${t("aria-selected")})`);
     boardEl.children[selected].classList.add("selected");
   }
 }
@@ -230,7 +327,7 @@ async function handleCellClick(i) {
   if (matches.length === 0) {
     swap(a, b);
     render();
-    statusEl.textContent = "这次交换不会形成消除，已回退。";
+    statusEl.textContent = t("status-no-match");
     await flashRemoved(500);
     statusEl.textContent = "";
     return;
@@ -251,10 +348,15 @@ function restart() {
   render();
 }
 
+localeSelect.addEventListener("change", (event) => {
+  setLocale(event.target.value);
+});
+
 restartBtn.addEventListener("click", () => {
   restart();
 });
 
 fillBoardWithoutMatches();
 render();
+setLocale(currentLocale);
 settleBoard();

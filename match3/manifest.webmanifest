@@ -1,13 +1,13 @@
 {
-  "name": "三消 Match-3",
-  "short_name": "三消",
+  "name": "Match-3",
+  "short_name": "Match3",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
-  "description": "离线可玩的三消小游戏",
+  "description": "Offline-ready Match-3 puzzle game.",
   "orientation": "portrait",
-  "lang": "zh-CN",
+  "lang": "en-US",
   "scope": "./",
   "icons": [
     {

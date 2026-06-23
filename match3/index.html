@@ -1,33 +1,39 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
-    <meta name="description" content="离线可玩三消游戏（PWA）" />
+    <meta name="description" content="Offline-ready Match-3 game built with HTML/CSS/JS (PWA)." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icons/icon-192.svg" />
     <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg" />
-    <title>三消 Match-3</title>
+    <title>Match-3</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header>
         <div>
-          <h1>三消 Match-3</h1>
-          <p>点击同色砖块后再点相邻砖块即可交换，形成 3 个及以上连线会自动消除。</p>
+          <h1 data-i18n="title">Match-3</h1>
+          <p data-i18n="subtitle">Tap a tile, then tap an adjacent tile to swap. Any line of 3 or more matching tiles is removed.</p>
+          <label for="locale" class="lang-label" data-i18n="locale-label">Language</label>
+          <select id="locale">
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+            <option value="ms">Bahasa Melayu</option>
+          </select>
         </div>
         <div class="score-box">
-          <div>分数</div>
+          <div data-i18n="score-label">Score</div>
           <strong id="score">0</strong>
-          <button id="restart">重开</button>
+          <button id="restart" data-i18n="restart">Restart</button>
         </div>
       </header>
 
-      <section class="board" id="board" aria-label="游戏棋盘"></section>
+      <section class="board" id="board" aria-label="Game board"></section>
 
-      <p class="hint">支持离线；安装后可直接从主屏启动。</p>
+      <p class="hint" data-i18n="hint">Offline support enabled; install to launch from your home screen.</p>
       <p class="offline-status" id="status"></p>
     </main>
 

@@ -49,6 +49,23 @@ p {
   min-width: 120px;
 }
 
+.lang-label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+select#locale {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 7px 9px;
+  width: 100%;
+  max-width: 180px;
+}
+
 #score {
   font-size: 30px;
 }
